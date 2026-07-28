@@ -1,5 +1,7 @@
-import { useState, useMemo } from 'react';
-import { Activity, Search, Building2, User, FileText, Settings, Shield, Calendar, Clock, Filter, XCircle } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Activity, Search, Building2, User, FileText, Settings, Shield, Calendar, Clock, Filter, XCircle, Loader2 } from 'lucide-react';
+import api from '../../api/axios';
+import { useToast } from '../../components/ui/Toast';
 
 const TYPE_ICON = {
   college: Building2, student: User, application: FileText,
@@ -13,24 +15,14 @@ const TYPE_COLOR = {
   auth: 'bg-success/15 text-green-800 dark:text-success ring-1 ring-success/25',
 };
 
-const LOGS = [
-  { id: 1, type: 'college', action: 'College Added', detail: 'ABC Institute of Technology was added to the system', user: 'Super Admin', timestamp: '2026-05-02T14:10:00' },
-  { id: 2, type: 'application', action: 'Application Approved', detail: 'CG27-003 (Aditya Roy) was approved by Admin', user: 'College Admin', timestamp: '2026-05-02T13:45:00' },
-  { id: 3, type: 'auth', action: 'Admin Login', detail: 'admin@college.edu signed in successfully', user: 'System', timestamp: '2026-05-02T13:30:00' },
-  { id: 4, type: 'system', action: 'Phase-2 Activated', detail: 'Phase-II was activated for George College – Batch 2025', user: 'Super Admin', timestamp: '2026-05-02T11:00:00' },
-  { id: 5, type: 'application', action: 'Application Rejected', detail: 'CG27-004 (Sneha Das) was rejected — incomplete documents', user: 'College Admin', timestamp: '2026-05-02T10:22:00' },
-  { id: 6, type: 'student', action: 'New Registration', detail: 'Rahul Sharma registered and submitted application CG27-001', user: 'Student', timestamp: '2026-05-01T16:15:00' },
-  { id: 7, type: 'college', action: 'College Updated', detail: 'Bengal College status changed to Inactive', user: 'Super Admin', timestamp: '2026-05-01T15:00:00' },
-  { id: 8, type: 'auth', action: 'Student Login', detail: 'rahul.sharma@example.com signed in', user: 'System', timestamp: '2026-05-01T09:00:00' },
-  { id: 9, type: 'application', action: 'Correction Requested', detail: 'Admin requested correction on CG27-007 (Arjun Mehta)', user: 'College Admin', timestamp: '2026-04-30T14:00:00' },
-  { id: 10, type: 'system', action: 'Phase-1 Opened', detail: 'Phase-I applications opened for session 2025-26', user: 'Super Admin', timestamp: '2026-04-29T10:00:00' },
-];
+
 
 const ALL_TYPES = ['All', 'college', 'application', 'student', 'system', 'auth'];
 
 const formatTimestamp = (ts) => {
+  if (!ts) return '';
   const date = new Date(ts);
-  const now = new Date('2026-05-02T15:00:00'); // Use system date for comparison
+  const now = new Date();
   const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
 
   const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -42,6 +34,8 @@ const formatTimestamp = (ts) => {
 };
 
 export function SuperAdminLogs() {
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('All');
   const [startDate, setStartDate] = useState('');
@@ -49,15 +43,37 @@ export function SuperAdminLogs() {
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const toast = useToast();
+
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        const res = await api.get('/super-admin/logs');
+        if (res.data.success) {
+          setLogs(res.data.data);
+        }
+      } catch (err) {
+        toast('Failed to load logs', 'error');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLogs();
+  }, [toast]);
 
   const filtered = useMemo(() => {
-    return LOGS.filter(l => {
-      const matchSearch = l.action.toLowerCase().includes(search.toLowerCase()) ||
-        l.detail.toLowerCase().includes(search.toLowerCase());
-      const matchType = typeFilter === 'All' || l.type === typeFilter;
+    return logs.filter(l => {
+      const logAction = l.action || '';
+      const logDetail = l.description || l.entity || '';
+      const logType = (l.entity || '').toLowerCase();
+      
+      const matchSearch = logAction.toLowerCase().includes(search.toLowerCase()) ||
+        logDetail.toLowerCase().includes(search.toLowerCase());
+      const matchType = typeFilter === 'All' || logType === typeFilter;
 
       // Date & Time Filter Logic
-      const logDate = new Date(l.timestamp);
+      const logDate = new Date(l.createdAt);
       const logDateTime = logDate.getTime();
 
       let matchDate = true;
@@ -74,14 +90,14 @@ export function SuperAdminLogs() {
 
       let matchTime = true;
       if (startTime || endTime) {
-        const logTimeStr = l.timestamp.split('T')[1].substring(0, 5); // "HH:mm"
+        const logTimeStr = l.createdAt.split('T')[1].substring(0, 5); // "HH:mm"
         if (startTime && logTimeStr < startTime) matchTime = false;
         if (endTime && logTimeStr > endTime) matchTime = false;
       }
 
       return matchSearch && matchType && matchDate && matchTime;
     });
-  }, [search, typeFilter, startDate, endDate, startTime, endTime]);
+  }, [logs, search, typeFilter, startDate, endDate, startTime, endTime]);
 
   const hasActiveFilters = startDate || endDate || startTime || endTime || typeFilter !== 'All' || search;
 
@@ -93,6 +109,14 @@ export function SuperAdminLogs() {
     setStartTime('');
     setEndTime('');
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -181,8 +205,12 @@ export function SuperAdminLogs() {
               <p className="text-xs text-text/50 mt-1">Try adjusting your filters or search terms</p>
             </div>
           ) : filtered.map((log, i) => {
-            const Icon = TYPE_ICON[log.type] || Activity;
-            const colorCls = TYPE_COLOR[log.type] || 'bg-muted/80 text-text/70 ring-1 ring-border/50';
+            const logType = (log.entity || '').toLowerCase();
+            const Icon = TYPE_ICON[logType] || Activity;
+            const colorCls = TYPE_COLOR[logType] || 'bg-muted/80 text-text/70 ring-1 ring-border/50';
+            const logDetail = log.description || log.entity;
+            const logUser = log.user ? `${log.user.name} (${log.user.role})` : 'System';
+            
             return (
               <div key={log.id} className="flex items-start gap-4 px-5 py-4 hover:bg-muted/25 transition-colors animate-fade-in group" style={{ animationDelay: `${i * 30}ms` }}>
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm transition-transform group-hover:scale-105 ${colorCls}`}>
@@ -192,15 +220,15 @@ export function SuperAdminLogs() {
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="font-bold text-text text-sm group-hover:text-primary transition-colors">{log.action}</p>
-                      <p className="text-xs text-text/70 mt-0.5 leading-relaxed">{log.detail}</p>
+                      <p className="text-xs text-text/70 mt-0.5 leading-relaxed">{logDetail}</p>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <span className="text-[11px] font-medium text-text/55 block">{formatTimestamp(log.timestamp)}</span>
+                      <span className="text-[11px] font-medium text-text/55 block">{formatTimestamp(log.createdAt)}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mt-2">
                     <span className="text-[10px] text-text/50 uppercase tracking-wider">Initiated by</span>
-                    <span className="text-[11px] font-semibold text-text bg-muted/90 border border-border px-2 py-0.5 rounded-md">{log.user}</span>
+                    <span className="text-[11px] font-semibold text-text bg-muted/90 border border-border px-2 py-0.5 rounded-md">{logUser}</span>
                   </div>
                 </div>
               </div>

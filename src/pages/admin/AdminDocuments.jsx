@@ -11,6 +11,7 @@ import {
 import { useState, useEffect } from "react";
 import { useToast } from "../../components/ui/Toast";
 import { TableSkeleton } from "../../components/ui/Skeleton";
+import api from "../../api/axios";
 
 const DOC_KEYS = ["doc10th", "doc12th", "idProof", "photo"];
 
@@ -58,88 +59,26 @@ export function AdminDocuments() {
   const [selectedCourses, setSelectedCourses] = useState([]);
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 1500);
-    return () => clearTimeout(timer);
+    const fetchDocs = async () => {
+      try {
+        const res = await api.get('/document/college');
+        if (res.data.success) {
+          setDocs(res.data.data);
+        }
+      } catch (err) {
+        toast("Failed to load documents", "error");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDocs();
   }, []);
 
   const [showModal, setShowModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [previewDoc, setPreviewDoc] = useState(null);
 
-  const [docs, setDocs] = useState([
-    {
-      id: "CG27-001",
-      student: "Rahul Sharma",
-      course: COURSES[0],
-      doc10th: "Verified",
-      doc12th: "Pending",
-      idProof: "Pending",
-      photo: "Rejected",
-    },
-    {
-      id: "CG27-002",
-      student: "Priya Singh",
-      course: COURSES[1],
-      doc10th: "Verified",
-      doc12th: "Verified",
-      idProof: "Verified",
-      photo: "Verified",
-    },
-    {
-      id: "CG27-003",
-      student: "Amit Kumar",
-      course: COURSES[2],
-      doc10th: "Verified",
-      doc12th: "Pending",
-      idProof: "Pending",
-      photo: "Pending",
-    },
-    {
-      id: "CG27-004",
-      student: "Sneha Das",
-      course: COURSES[3],
-      doc10th: "Verified",
-      doc12th: "Verified",
-      idProof: "Verified",
-      photo: "Verified",
-    },
-    {
-      id: "CG27-005",
-      student: "Aditya Roy",
-      course: COURSES[4],
-      doc10th: "Verified",
-      doc12th: "Pending",
-      idProof: "Pending",
-      photo: "Pending",
-    },
-    {
-      id: "CG27-006",
-      student: "Anjali Singh",
-      course: COURSES[5],
-      doc10th: "Verified",
-      doc12th: "Verified",
-      idProof: "Verified",
-      photo: "Verified",
-    },
-    {
-      id: "CG27-007",
-      student: "Vikram Roy",
-      course: COURSES[6],
-      doc10th: "Verified",
-      doc12th: "Pending",
-      idProof: "Pending",
-      photo: "Pending",
-    },
-    {
-      id: "CG27-008",
-      student: "Sonia Das",
-      course: COURSES[7],
-      doc10th: "Verified",
-      doc12th: "Verified",
-      idProof: "Verified",
-      photo: "Verified",
-    },
-  ]);
+  const [docs, setDocs] = useState([]);
 
   // ✅ FILTER LOGIC (PRECise)
   const filtered = docs.filter((d) => {
@@ -172,7 +111,7 @@ export function AdminDocuments() {
   // 🔥 BULK DOWNLOAD
   const handleBulkDownload = async () => {
     try {
-      const res = await fetch(process.env.document_open, {
+      const res = await fetch(import.meta.env.VITE_API_URL + '/document/bulk', {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -197,7 +136,7 @@ export function AdminDocuments() {
   // 🔥 STUDENT DOWNLOAD
   const handleStudentDownload = async () => {
     try {
-      const res = await fetch(process.env.document_open, {
+      const res = await fetch(import.meta.env.VITE_API_URL + '/document/student', {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

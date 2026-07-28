@@ -1,34 +1,63 @@
-import { Users, Building2, FileText, CheckCircle, TrendingUp, Activity } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Users, Building2, FileText, CheckCircle, TrendingUp, Activity, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-
-const areaData = [
-  { month: 'Jun', apps: 120 }, { month: 'Jul', apps: 210 }, { month: 'Aug', apps: 340 },
-  { month: 'Sep', apps: 490 }, { month: 'Oct', apps: 620 }, { month: 'Nov', apps: 540 },
-];
-
-const pieData = [
-  { name: 'Approved', value: 892, color: '#16A34A' },
-  { name: 'Pending', value: 214, color: '#F59E0B' },
-  { name: 'Rejected', value: 142, color: '#DC2626' },
-];
-
-const recentActivity = [
-  { id: 1, action: 'New college added', detail: 'ABC Institute of Technology', time: '2m ago', type: 'college' },
-  { id: 2, action: 'Application approved', detail: 'CG27-089 — Jane Smith', time: '15m ago', type: 'app' },
-  { id: 3, action: 'Phase-2 activated', detail: 'George College — Batch 2025', time: '1h ago', type: 'phase' },
-  { id: 4, action: 'New student registered', detail: 'Arjun Kumar — BCA', time: '2h ago', type: 'student' },
-  { id: 5, action: 'Application rejected', detail: 'CG27-045 — John Doe', time: '3h ago', type: 'app' },
-];
-
-const STATS = [
-  { name: 'Total Colleges', value: '24', icon: Building2, color: 'text-purple-600', bg: 'bg-purple-100', trend: '+2 this month' },
-  { name: 'Total Students', value: '8,420', icon: Users, color: 'text-blue-600', bg: 'bg-blue-100', trend: '+340 this month' },
-  { name: 'Applications', value: '1,248', icon: FileText, color: 'text-warning', bg: 'bg-warning/10', trend: '+89 this week' },
-  { name: 'Approvals', value: '892', icon: CheckCircle, color: 'text-success', bg: 'bg-success/10', trend: '71.5% rate' },
-];
+import api from '../../api/axios';
+import { useToast } from '../../components/ui/Toast';
 
 export function SuperAdminDashboard() {
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState(null);
+  const [recentLogs, setRecentLogs] = useState([]);
+  const showToast = useToast();
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const [metricsRes, logsRes] = await Promise.all([
+          api.get('/super-admin/dashboard'),
+          api.get('/super-admin/logs')
+        ]);
+        
+        if (metricsRes.data.success) {
+          setData(metricsRes.data.data);
+        }
+        if (logsRes.data.success) {
+          setRecentLogs(logsRes.data.data.slice(0, 5));
+        }
+      } catch (err) {
+        showToast('Failed to fetch dashboard data', 'error');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDashboardData();
+  }, [showToast]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    );
+  }
+
+  const { totalColleges = 0, totalStudents = 0, totalApplications = 0, approvedApplications = 0, pendingApplications = 0, rejectedApplications = 0, appsOverTime = [] } = data || {};
+
+  const STATS = [
+    { name: 'Total Colleges', value: totalColleges, icon: Building2, color: 'text-purple-600', bg: 'bg-purple-100', trend: 'latest' },
+    { name: 'Total Students', value: totalStudents, icon: Users, color: 'text-blue-600', bg: 'bg-blue-100', trend: 'latest' },
+    { name: 'Applications', value: totalApplications, icon: FileText, color: 'text-warning', bg: 'bg-warning/10', trend: 'latest' },
+    { name: 'Approvals', value: approvedApplications, icon: CheckCircle, color: 'text-success', bg: 'bg-success/10', trend: 'latest' },
+  ];
+
+  const pieData = [
+    { name: 'Approved', value: approvedApplications, color: '#16A34A' },
+    { name: 'Pending', value: pendingApplications, color: '#F59E0B' },
+    { name: 'Rejected', value: rejectedApplications, color: '#DC2626' },
+  ].filter(d => d.value > 0);
+
   return (
     <div className="space-y-8 animate-fade-in">
       <div className="delay-100">
@@ -55,7 +84,7 @@ export function SuperAdminDashboard() {
         <div className="lg:col-span-2 bg-card border border-border rounded-2xl p-6 shadow-sm animate-fade-in-up delay-200">
           <h2 className="text-base font-bold text-text mb-5">Applications Over Time</h2>
           <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={areaData} margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
+            <AreaChart data={appsOverTime} margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="10%" stopColor="#2563EB" stopOpacity={0.15} />
@@ -103,18 +132,23 @@ export function SuperAdminDashboard() {
           <Link to="/super-admin/logs" className="text-sm font-medium text-primary hover:text-primary/80">View Logs</Link>
         </div>
         <div className="divide-y divide-border">
-          {recentActivity.map(a => (
+          {recentLogs.map(a => (
             <div key={a.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 transition-colors">
               <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <Activity className="w-4 h-4 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-text">{a.action}</p>
-                <p className="text-xs text-gray-500 truncate">{a.detail}</p>
+                <p className="text-xs text-gray-500 truncate">{a.description || a.entity}</p>
               </div>
-              <span className="text-xs text-gray-400 whitespace-nowrap">{a.time}</span>
+              <span className="text-xs text-gray-400 whitespace-nowrap">
+                {new Date(a.createdAt).toLocaleDateString()}
+              </span>
             </div>
           ))}
+          {recentLogs.length === 0 && (
+            <div className="p-6 text-center text-gray-500 text-sm">No recent activity</div>
+          )}
         </div>
       </div>
     </div>

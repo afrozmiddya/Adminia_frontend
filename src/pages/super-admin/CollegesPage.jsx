@@ -1,46 +1,86 @@
-import { useState } from 'react';
-import { Plus, Search, Edit2, Trash2, Building2, MapPin, Users } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Search, Edit2, Trash2, Building2, MapPin, Users, Loader2 } from 'lucide-react';
 import { Modal } from '../../components/ui/Modal';
 import { useToast } from '../../components/ui/Toast';
-
-const MOCK_COLLEGES = [
-  { id: 1, name: '133/George College', location: 'Kolkata', mobile: '9876543210', email: '133@example.com', courses: 12, students: 420, status: 'Active', since: '2018' },
-  { id: 2, name: 'ABC Institute of Technology', location: 'Kolkata', mobile: '9876543211', email: 'abc@example@example.com', courses: 8, students: 310, status: 'Active', since: '2020' },
-  { id: 3, name: 'Bengal College of Commerce', location: 'Howrah', mobile: '9876543212', email: 'bengalcollege@example.com', courses: 6, students: 190, status: 'Inactive', since: '2019' },
-  { id: 4, name: 'City College Annexe', location: 'Kolkata', mobile: '9876543213', email: 'citycollege@example.com', courses: 10, students: 250, status: 'Active', since: '2016' }, 
-]
+import api from '../../api/axios';
 
 const inputCls = "w-full px-4 py-2.5 rounded-xl border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm bg-card text-text placeholder:text-text/45";
 
 export function CollegesPage() {
-  const [colleges, setColleges] = useState(MOCK_COLLEGES);
+  const [colleges, setColleges] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: '', mobile: '', email: '', location: ''});
   const toast = useToast();
 
-  const filtered = colleges.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || c.mobile.includes(search) || c.email.includes(search) || c.location.includes(search));
+  const fetchColleges = async () => {
+    try {
+      const res = await api.get('/super-admin/colleges');
+      if (res.data.success) {
+        setColleges(res.data.data);
+      }
+    } catch (err) {
+      toast('Failed to load colleges', 'error');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchColleges();
+  }, [toast]);
+
+  const filtered = colleges.filter(c => 
+    c.name.toLowerCase().includes(search.toLowerCase()) || 
+    c.mobile.includes(search) || 
+    c.email.includes(search) || 
+    c.location.toLowerCase().includes(search.toLowerCase())
+  );
 
   const openAdd = () => { setEditing(null); setForm({ name: '', mobile: '', email: '', location: '' }); setModalOpen(true); };
   const openEdit = (c) => { setEditing(c); setForm({ name: c.name, mobile: c.mobile, email: c.email, location: c.location }); setModalOpen(true); };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name || !form.mobile || !form.email || !form.location) return;
-    if (editing) {
-      setColleges(cs => cs.map(c => c.id === editing.id ? { ...c, ...form } : c));
-      toast && toast('College updated!', 'success');
-    } else {
-      setColleges(cs => [...cs, { id: Date.now(), mobile: '9876543214', email: 'newcollege@example.com','location': form.location, courses: 0, students: 0, since: '2025', ...form }]);
-      toast && toast('College added!', 'success');
+    try {
+      if (editing) {
+        // Mocking edit API for now, since it wasn't specified in backend yet
+        setColleges(cs => cs.map(c => c.id === editing.id ? { ...c, ...form } : c));
+        toast('College updated locally (API not yet implemented)', 'success');
+      } else {
+        const payload = {
+            collegeName: form.name,
+            mobile: form.mobile,
+            email: form.email,
+            location: form.location
+        };
+        const res = await api.post('/college/register', payload);
+        if (res.data.success) {
+          toast('College registered successfully!', 'success');
+          fetchColleges();
+        }
+      }
+      setModalOpen(false);
+    } catch (err) {
+      toast(err.response?.data?.message || 'Failed to save college', 'error');
     }
-    setModalOpen(false);
   };
 
   const handleDelete = (id) => {
     setColleges(cs => cs.filter(c => c.id !== id));
-    toast && toast('College removed.', 'info');
+    toast('College removed locally (API not yet implemented)', 'info');
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -56,8 +96,8 @@ export function CollegesPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[{ label: 'Total Colleges', value: colleges.length, icon: Building2, color: 'text-purple-400', bg: 'bg-purple-500/15' },
-          { label: 'Active', value: colleges.filter(c => c.status === 'Active').length, icon: Users, color: 'text-success', bg: 'bg-success/10' },
-          { label: 'Total Students', value: colleges.reduce((s, c) => s + c.students, 0), icon: Users, color: 'text-primary', bg: 'bg-primary/10' }]
+          { label: 'Active', value: colleges.filter(c => c.isActive).length, icon: Users, color: 'text-success', bg: 'bg-success/10' },
+          { label: 'Total Students', value: colleges.reduce((s, c) => s + (c._count?.students || 0), 0), icon: Users, color: 'text-primary', bg: 'bg-primary/10' }]
           .map((s, i) => (
             <div key={i} className="bg-card border border-border rounded-2xl p-5 shadow-sm flex items-center gap-4 animate-fade-in-up" style={{ animationDelay: `${i * 60}ms` }}>
               <div className={`p-3 rounded-xl ${s.bg} ${s.color}`}><s.icon className="w-5 h-5" /></div>
@@ -103,8 +143,8 @@ export function CollegesPage() {
                   <td className="px-6 py-4 text-text/55">{c.mobile}</td>
                   <td className="px-6 py-4 text-text/55">{c.email}</td>
                   <td className="px-6 py-4"><div className="flex items-center gap-1 text-text/55"><MapPin className="w-3.5 h-3.5 shrink-0" />{c.location}</div></td>
-                  <td className="px-6 py-4 text-text/55">{c.courses}</td>
-                  <td className="px-6 py-4 text-text/55">{c.students}</td>
+                  <td className="px-6 py-4 text-text/55">N/A</td>
+                  <td className="px-6 py-4 text-text/55">{c._count?.students || 0}</td>
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-end gap-1">
                       <button onClick={() => openEdit(c)} className="p-2 text-text/45 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"><Edit2 className="w-4 h-4" /></button>

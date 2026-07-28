@@ -5,7 +5,7 @@ import ThemeToggle from '../ThemeToggle';
 export default function LandingLayout() {
     return (
         <div className="min-h-screen bg-background flex flex-col font-sans text-text">
-            <header className="sticky top-0 z-50 w-full h-[72px] bg-card border-b border-border shadow-sm">
+            <header className="sticky top-0 z-50 w-full h-[72px] glass border-b border-border shadow-sm transition-all duration-300">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
                     <div className="flex items-center gap-8">
                         <Link to="/" className="flex items-center gap-2 text-2xl font-bold text-primary"><img src="https://res.cloudinary.com/dz0xmodpo/image/upload/v1778387204/Adminia_Logo_vhmg3p.png" alt="Adminia Logo" className="w-12 h-12" />Adminia</Link>    

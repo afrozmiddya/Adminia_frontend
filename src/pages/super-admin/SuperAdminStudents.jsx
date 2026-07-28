@@ -1,30 +1,56 @@
-import { useState } from 'react';
-import { Search, Filter, Download, Eye, Users } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Filter, Download, Eye, Users, Loader2 } from 'lucide-react';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { EmptyState } from '../../components/ui/EmptyState';
+import api from '../../api/axios';
+import { useToast } from '../../components/ui/Toast';
 
-const STUDENTS = [
-  { id: 'CG27-001', name: 'Rahul Sharma', college: 'George College', course: 'BCA', category: 'General', status: 'Approved', mobile: '+91 98765 43210', session: '2025-26' },
-  { id: 'CG27-002', name: 'Priya Singh', college: 'George College', course: 'BBA', category: 'OBC', status: 'Under Review', mobile: '+91 91234 56789', session: '2025-26' },
-  { id: 'CG27-003', name: 'Aditya Roy', college: 'ABC Institute', course: 'B.SC(MLT)', category: 'SC', status: 'Approved', mobile: '+91 87654 32100', session: '2025-26' },
-  { id: 'CG27-004', name: 'Sneha Das', college: 'George College', course: 'BBA (HM)', category: 'General', status: 'Rejected', mobile: '+91 99887 76655', session: '2025-26' },
-  { id: 'CG27-005', name: 'Amit Kumar', college: 'City College', course: 'BMS', category: 'ST', status: 'Confirmed', mobile: '+91 88776 65544', session: '2025-26' },
-  { id: 'CG27-006', name: 'Nisha Patel', college: 'ABC Institute', course: 'BTTM', category: 'General', status: 'Under Review', mobile: '+91 77665 54433', session: '2025-26' },
-];
-
-const STATUSES = ['All', 'Approved', 'Under Review', 'Rejected', 'Confirmed'];
+const STATUSES = ['All', 'APPROVED', 'UNDER_REVIEW', 'REJECTED', 'SUBMITTED', 'CONFIRMED'];
 
 export function SuperAdminStudents() {
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const toast = useToast();
 
-  const filtered = STUDENTS.filter(s => {
-    const matchSearch = s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.id.toLowerCase().includes(search.toLowerCase()) ||
-      s.college.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === 'All' || s.status === statusFilter;
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        const res = await api.get('/super-admin/students');
+        if (res.data.success) {
+          setStudents(res.data.data);
+        }
+      } catch (err) {
+        toast('Failed to load students', 'error');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStudents();
+  }, [toast]);
+
+  const filtered = students.filter(s => {
+    const sCollege = s.college?.name || '';
+    const sId = s.id || '';
+    const sStatus = s.applications?.[0]?.status || 'DRAFT';
+    
+    const matchSearch = s.fullName.toLowerCase().includes(search.toLowerCase()) ||
+      sId.toLowerCase().includes(search.toLowerCase()) ||
+      sCollege.toLowerCase().includes(search.toLowerCase());
+      
+    const matchStatus = statusFilter === 'All' || sStatus === statusFilter;
     return matchSearch && matchStatus;
   });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -41,10 +67,10 @@ export function SuperAdminStudents() {
       {/* Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Total', value: STUDENTS.length, color: 'text-primary bg-primary/10' },
-          { label: 'Approved', value: STUDENTS.filter(s => s.status === 'Approved').length, color: 'text-success bg-success/10' },
-          { label: 'Under Review', value: STUDENTS.filter(s => s.status === 'Under Review').length, color: 'text-warning bg-warning/10' },
-          { label: 'Confirmed', value: STUDENTS.filter(s => s.status === 'Confirmed').length, color: 'text-indigo-400 bg-indigo-500/15' },
+          { label: 'Total', value: students.length, color: 'text-primary bg-primary/10' },
+          { label: 'Approved', value: students.filter(s => s.applications?.[0]?.status === 'APPROVED').length, color: 'text-success bg-success/10' },
+          { label: 'Under Review', value: students.filter(s => s.applications?.[0]?.status === 'UNDER_REVIEW').length, color: 'text-warning bg-warning/10' },
+          { label: 'Submitted', value: students.filter(s => s.applications?.[0]?.status === 'SUBMITTED').length, color: 'text-indigo-400 bg-indigo-500/15' },
         ].map((s, i) => (
           <div key={i} className="bg-card border border-border rounded-2xl p-4 shadow-sm animate-fade-in-up" style={{ animationDelay: `${i * 50}ms` }}>
             <p className="text-xs text-text/55 mb-1">{s.label}</p>
@@ -86,30 +112,35 @@ export function SuperAdminStudents() {
             <tbody className="divide-y divide-border">
               {filtered.length === 0 ? (
                 <tr><td colSpan={8} className="py-12 text-center text-text/45 text-sm">No students found.</td></tr>
-              ) : filtered.map((s, i) => (
-                <tr key={s.id} className="hover:bg-muted/30 transition-colors animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                        {s.name.charAt(0)}
+              ) : filtered.map((s, i) => {
+                const sStatus = s.applications?.[0]?.status || 'DRAFT';
+                const appId = s.applications?.[0]?.id?.slice(-6).toUpperCase() || 'N/A';
+                
+                return (
+                  <tr key={s.id} className="hover:bg-muted/30 transition-colors animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                          {s.fullName.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-text">{s.fullName}</p>
+                          <p className="text-xs text-text/45">{s.mobile}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold text-text">{s.name}</p>
-                        <p className="text-xs text-text/45">{s.mobile}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 font-mono text-xs text-text/55">{s.id}</td>
-                  <td className="px-6 py-4 text-text/55">{s.college}</td>
-                  <td className="px-6 py-4 text-text/55">{s.course}</td>
-                  <td className="px-6 py-4 text-text/55">{s.category}</td>
-                  <td className="px-6 py-4 text-text/55">{s.session}</td>
-                  <td className="px-6 py-4"><StatusBadge status={s.status} /></td>
-                  <td className="px-6 py-4 text-right">
-                    <button className="p-2 text-text/45 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"><Eye className="w-4 h-4" /></button>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-6 py-4 font-mono text-xs text-text/55">{appId}</td>
+                    <td className="px-6 py-4 text-text/55">{s.college?.name}</td>
+                    <td className="px-6 py-4 text-text/55">{s.course}</td>
+                    <td className="px-6 py-4 text-text/55">N/A</td>
+                    <td className="px-6 py-4 text-text/55">{s.year}</td>
+                    <td className="px-6 py-4"><StatusBadge status={sStatus} /></td>
+                    <td className="px-6 py-4 text-right">
+                      <button className="p-2 text-text/45 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"><Eye className="w-4 h-4" /></button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

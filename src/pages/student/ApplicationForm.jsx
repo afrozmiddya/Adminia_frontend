@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Check, ChevronRight, Save, Send } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
+import api from '../../api/axios';
+import { useEffect } from 'react';
 
 const STEPS = [
   { id: 1, name: 'Admission Details' },
@@ -45,14 +47,84 @@ export function ApplicationForm() {
   const handleNext = e => { e.preventDefault(); setStep(s => Math.min(s + 1, 4)); window.scrollTo(0, 0); };
   const handleBack = () => { setStep(s => Math.max(s - 1, 1)); window.scrollTo(0, 0); };
 
-  const handleDraft = () => {
+  const formatPayload = () => ({
+    phase1: {
+      admissionDetails: {
+        session: form.session, collegeDistrict: form.district, collegeName: form.college,
+        courseUnderBy: form.courseUnderBy, admissionType: form.admissionType,
+        admissionCategory: form.admissionCategory, entranceTest: form.entranceTest,
+        course: form.course, stream: form.stream, entranceRollNo: form.entranceRoll,
+        entranceRank: form.entranceRank,
+      },
+      personalInformation: {
+        studentName: form.studentName, sex: form.sex, dob: form.dob,
+        mobile: form.mobile, email: form.email, fatherName: form.fatherName,
+        motherName: form.motherName,
+      },
+      identityCitizenship: {
+        residentialStatus: form.residentialStatus, country: form.country,
+        nationality: form.nationality, abcId: form.abcId, aadhaarNumber: form.aadhaar,
+      }
+    }
+  });
+
+  const handleDraft = async () => {
     setSaving(true);
-    setTimeout(() => { setSaving(false); toast && toast('Draft saved successfully!', 'success', 'Saved'); }, 900);
+    try {
+      await api.patch('/application/save-draft', formatPayload());
+      toast && toast('Draft saved successfully!', 'success', 'Saved');
+    } catch (err) {
+      toast && toast(err.response?.data?.message || 'Failed to save draft', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleSubmit = () => {
-    toast && toast('Phase-I application submitted successfully!', 'success', 'Submitted');
+  const handleSubmit = async () => {
+    try {
+      await api.patch('/application/save-draft', formatPayload());
+      await api.post('/application/submit');
+      toast && toast('Phase-I application submitted successfully!', 'success', 'Submitted');
+      // Optionally redirect or update local state
+    } catch (err) {
+      toast && toast(err.response?.data?.message || 'Failed to submit', 'error');
+    }
   };
+
+  // Load existing draft if any
+  useEffect(() => {
+    const loadDraft = async () => {
+      try {
+        const res = await api.get('/application/me');
+        if (res.data.success && res.data.data.formData?.phase1) {
+          const { admissionDetails, personalInformation, identityCitizenship } = res.data.data.formData.phase1;
+          setForm(f => ({
+            ...f,
+            ...personalInformation,
+            session: admissionDetails?.session || '',
+            district: admissionDetails?.collegeDistrict || '',
+            college: admissionDetails?.collegeName || '',
+            courseUnderBy: admissionDetails?.courseUnderBy || '',
+            admissionType: admissionDetails?.admissionType || '',
+            admissionCategory: admissionDetails?.admissionCategory || '',
+            entranceTest: admissionDetails?.entranceTest || '',
+            course: admissionDetails?.course || '',
+            stream: admissionDetails?.stream || '',
+            entranceRoll: admissionDetails?.entranceRollNo || '',
+            entranceRank: admissionDetails?.entranceRank || '',
+            residentialStatus: identityCitizenship?.residentialStatus || '',
+            country: identityCitizenship?.country || '',
+            nationality: identityCitizenship?.nationality || '',
+            abcId: identityCitizenship?.abcId || '',
+            aadhaar: identityCitizenship?.aadhaarNumber || ''
+          }));
+        }
+      } catch (err) {
+        console.error("Failed to load draft");
+      }
+    };
+    loadDraft();
+  }, []);
 
   const reviewSections = [
     { title: 'Admission Details', fields: [

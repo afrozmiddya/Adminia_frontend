@@ -2,11 +2,14 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, Bell, ChevronDown, LogOut, User, GraduationCap, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import ThemeToggle from '../ThemeToggle';
+import { useAuthStore } from '../../store/authStore';
+
 export default function DashboardLayout({ navigation, title }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, logout } = useAuthStore();
 
   const isStudent = title === 'Student Portal';
   const isSuperAdmin = title === 'Super Admin';
@@ -19,16 +22,21 @@ export default function DashboardLayout({ navigation, title }) {
   const gradient = gradients[title] || gradients['Admin Panel'];
 
   const userMeta = {
-    'Student Portal': { name: 'Student Name', email: 'student@example.com', initials: 'S', Icon: GraduationCap },
-    'Admin Panel': { name: 'College Admin', email: 'admin@college.edu', initials: 'A', Icon: ShieldCheck },
-    'Super Admin': { name: 'Super Admin', email: 'superadmin@adminia.in', initials: 'SA', Icon: ShieldCheck },
+    'Student Portal': { name: user?.name || 'Student Name', email: user?.email || 'student@example.com', initials: user?.name?.charAt(0) || 'S', Icon: GraduationCap },
+    'Admin Panel': { name: user?.name || 'College Admin', email: user?.email || 'admin@college.edu', initials: user?.name?.charAt(0) || 'A', Icon: ShieldCheck },
+    'Super Admin': { name: user?.name || 'Super Admin', email: user?.email || 'superadmin@adminia.in', initials: user?.name?.charAt(0) || 'SA', Icon: ShieldCheck },
   };
-  const user = userMeta[title] || userMeta['Admin Panel'];
+  const activeUser = userMeta[title] || userMeta['Admin Panel'];
 
   const isActive = (item) => {
     const roots = ['/student', '/admin', '/super-admin', '/'];
     if (roots.includes(item.href)) return location.pathname === item.href;
     return location.pathname.startsWith(item.href);
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
   return (
@@ -84,13 +92,13 @@ export default function DashboardLayout({ navigation, title }) {
         <div className="p-3 border-t border-border shrink-0">
           <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors">
             <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shrink-0`}>
-              <span className="text-white text-xs font-bold">{user.initials}</span>
+              <span className="text-white text-xs font-bold">{activeUser.initials}</span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-text truncate">{user.name}</p>
-              <p className="text-xs text-text/50 truncate">{user.email}</p>
+              <p className="text-sm font-semibold text-text truncate">{activeUser.name}</p>
+              <p className="text-xs text-text/50 truncate">{activeUser.email}</p>
             </div>
-            <button onClick={() => navigate('/')}
+            <button onClick={handleLogout}
               title="Logout"
               className="p-1.5 text-text/45 hover:text-danger hover:bg-danger/10 rounded-lg transition-colors shrink-0">
               <LogOut className="w-4 h-4" />
@@ -103,7 +111,7 @@ export default function DashboardLayout({ navigation, title }) {
       <div className="flex-1 lg:pl-[260px] flex flex-col min-h-screen min-w-0 w-0">
 
         {/* Top header */}
-        <header className="h-[68px] bg-card border-b border-border flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30">
+        <header className="h-[68px] glass border-b border-border flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30 transition-all duration-300">
 
           {/* Hamburger (mobile) */}
           <button onClick={() => setSidebarOpen(true)}

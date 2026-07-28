@@ -1,5 +1,9 @@
 import { Activity, FileText, Hash, Award, CheckCircle, Clock, AlertCircle, ArrowRight, MessageSquare, ShieldCheck, BookOpen, Info } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import api from '../../api/axios';
+import { useAuthStore } from '../../store/authStore';
+import { useToast } from '../../components/ui/Toast';
 
 const APP_STATUS = 'Under Review'; // Draft | Submitted | Under Review | Need Correction | Approved | Confirmed
 
@@ -36,22 +40,58 @@ const GUIDELINES = [
 ];
 
 export function StudentDashboard() {
-  const banner    = BANNER[APP_STATUS] || BANNER['Under Review'];
+  const { user } = useAuthStore();
+  const [appData, setAppData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const showToast = useToast();
+
+  useEffect(() => {
+    const fetchApp = async () => {
+      try {
+        const res = await api.get('/application/me');
+        if (res.data.success && res.data.data) {
+          setAppData(res.data.data);
+        }
+      } catch (err) {
+        if (err.response?.status !== 404) {
+          showToast('Failed to load application data', 'error');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchApp();
+  }, [showToast]);
+
+  // Map backend status to frontend display labels if needed
+  const statusMapping = {
+    'DRAFT': 'Draft',
+    'SUBMITTED': 'Submitted',
+    'UNDER_REVIEW': 'Under Review',
+    'NEED_CORRECTION': 'Need Correction',
+    'APPROVED': 'Approved',
+    'CONFIRMED': 'Confirmed'
+  };
+
+  const appStatus = appData ? statusMapping[appData.status] || 'Draft' : 'Draft';
+  const appId = appData?.applicationId || 'Not started';
+
+  const banner    = BANNER[appStatus] || BANNER['Draft'];
   const BIcon     = banner.icon;
-  const curStep   = PROGRESS[APP_STATUS] || 3;
+  const curStep   = PROGRESS[appStatus] || 1;
   const pct       = ((curStep - 1) / (STEPS.length - 1)) * 100;
 
   const stats = [
-    { name: 'Application Status', value: APP_STATUS,       icon: Activity,  color: 'text-primary',    bg: 'bg-primary/10' },
-    { name: 'Docs Uploaded',      value: '3 / 5',          icon: FileText,  color: 'text-secondary',  bg: 'bg-secondary/10' },
-    { name: 'Application ID',     value: 'CG27-001',       icon: Hash,      color: 'text-purple-400', bg: 'bg-purple-500/15' },
+    { name: 'Application Status', value: appStatus,       icon: Activity,  color: 'text-primary',    bg: 'bg-primary/10' },
+    { name: 'Docs Uploaded',      value: appData?.documents?.length ? `${appData.documents.length} Docs` : '0 Docs',          icon: FileText,  color: 'text-secondary',  bg: 'bg-secondary/10' },
+    { name: 'Application ID',     value: appId,       icon: Hash,      color: 'text-purple-400', bg: 'bg-purple-500/15' },
     { name: 'Next Deadline',   value: '2026-05-31',        icon: Clock,     color: 'text-warning',    bg: 'bg-warning/10' },
   ];
 
   return (
     <div className="space-y-8 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold text-text">Welcome, Student Name 👋</h1>
+        <h1 className="text-2xl font-bold text-text">Welcome, {user?.name || 'Student'} 👋</h1>
         <p className="text-text/60 mt-1 text-sm">Track your admission progress below.</p>
       </div>
 

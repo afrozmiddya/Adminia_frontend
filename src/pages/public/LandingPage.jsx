@@ -21,8 +21,8 @@ export function LandingPage() {
                                 <Link to="/login" className="inline-flex items-center justify-center px-6 py-3.5 border border-transparent text-base font-medium border-2 rounded-xl text-white bg-primary hover:bg-primary/90 transition-all shadow-sm">
                                     Login Now <ArrowRight className="ml-2 w-5 h-5" />
                                 </Link>
-                                <Link to="/super-admin" className="inline-flex items-center justify-center px-6 py-3.5 border-2 border-border rounded-xl text-base font-medium text-text bg-card hover:bg-border/40 transition-all shadow-sm">
-                                    Super_Admin Portal <ArrowRight className="ml-2 w-5 h-5" />
+                                <Link to="/admin-login" className="inline-flex items-center justify-center px-6 py-3.5 border-2 border-border rounded-xl text-base font-medium text-text bg-card hover:bg-border/40 transition-all shadow-sm">
+                                    Super Admin Login <ArrowRight className="ml-2 w-5 h-5" />
                                 </Link>
                             </div>
                         </div>

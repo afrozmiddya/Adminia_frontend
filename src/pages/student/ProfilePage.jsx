@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
 import { CardSkeleton } from '../../components/ui/Skeleton';
+import { useAuthStore } from '../../store/authStore';
+import { useNavigate } from 'react-router-dom';
 
 const fieldCls =
   'w-full px-4 py-2.5 bg-card text-text placeholder:text-text/45 border border-border rounded-xl text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-colors';
@@ -14,25 +16,33 @@ const fieldReadonlyCls =
 
 export function ProfilePage() {
   const toast = useToast();
+  const navigate = useNavigate();
+  const { user, logout } = useAuthStore();
+  
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('personal');
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 1200);
+    const timer = setTimeout(() => setLoading(false), 500);
     return () => clearTimeout(timer);
   }, []);
 
   const [profile, setProfile] = useState({
-    name: "Rahul Sharma",
-    id: "CG27-001",
-    email: "rahul.sharma@example.com",
-    phone: "+91 98765 43210",
+    name: user?.name || "Student Name",
+    id: user?.id || "N/A",
+    email: user?.email || "email@example.com",
+    phone: user?.phone || "Not provided",
     college: "George College",
-    course: "BCA",
-    address: "Kolkata, West Bengal",
+    course: "Not selected",
+    address: "Not provided",
     avatar: null
   });
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   const handleSave = () => {
     setIsSaving(true);
@@ -85,7 +95,7 @@ export function ProfilePage() {
             </button>
           ))}
           <div className="pt-4 mt-4 border-t border-border">
-            <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-red-500 hover:bg-red-500/10 transition-all">
+            <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-red-500 hover:bg-red-500/10 transition-all">
               <LogOut className="w-4 h-4" />
               Sign Out
             </button>

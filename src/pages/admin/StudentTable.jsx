@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useToast } from '../../components/ui/Toast';
 import { Modal } from '../../components/ui/Modal';
 import { TableSkeleton } from '../../components/ui/Skeleton';
+import api from '../../api/axios';
 
 const inputCls = 'w-full px-4 py-2.5 border border-border rounded-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm transition-all bg-card text-text placeholder:text-text/45';
 
@@ -32,80 +33,7 @@ const Info = ({ label, value }) => (
 export function StudentTable() {
   const toast = useToast();
   const [loading, setLoading] = useState(true);
-  const [students, setStudents] = useState([
-    { 
-      id: 'CG27-001', 
-      name: 'Rahul Sharma', 
-      fatherName: 'Suresh Sharma',
-      motherName: 'Kavita Sharma',
-      dob: '15 May 2004',
-      sex: 'Male',
-      category: 'General',
-      mobile: '+91 98765 43210', 
-      email: 'rahul@example.com', 
-      course: 'BCA', 
-      rank: '1245', 
-      session: '2025-26',
-      district: 'Kolkata',
-      college: 'George College',
-      admissionType: 'Regular',
-      aadhaar: 'XXXX XXXX 1234',
-      abcId: 'ABC12345678',
-      bloodGroup: 'B+',
-      religion: 'Hindu',
-      guardian: { name: 'Suresh Sharma', contact: '9876543210', relation: 'Father', address: 'Kolkata' },
-      contact: { address: 'Howrah, WB', altMobile: '9123456780', domicile: 'West Bengal', state: 'West Bengal', pin: '711101' },
-      education: { examType: '12th', board: 'WBCHSE', year: '2023', marks: '89%', division: 'First', cgpa: '8.9' }
-    },
-    { 
-      id: 'CG27-002', 
-      name: 'Priya Singh', 
-      fatherName: 'Rajesh Singh',
-      motherName: 'Sunita Singh',
-      dob: '22 Aug 2005',
-      sex: 'Female',
-      category: 'OBC-A',
-      mobile: '+91 91234 56789', 
-      email: 'priya@example.com', 
-      course: 'BBA', 
-      rank: '890', 
-      session: '2025-26',
-      district: 'North 24 Parganas',
-      college: 'George College',
-      admissionType: 'Regular',
-      aadhaar: 'XXXX XXXX 5678',
-      abcId: 'ABC87654321',
-      bloodGroup: 'O+',
-      religion: 'Hindu',
-      guardian: { name: 'Rajesh Singh', contact: '9123456789', relation: 'Father', address: 'Barasat' },
-      contact: { address: 'Barasat, WB', altMobile: '9887766554', domicile: 'West Bengal', state: 'West Bengal', pin: '700124' },
-      education: { examType: '12th', board: 'CBSE', year: '2024', marks: '92%', division: 'First', cgpa: '9.2' }
-    },
-    { 
-      id: 'CG27-003', 
-      name: 'Aditya Roy', 
-      fatherName: 'Pradip Roy',
-      motherName: 'Anjali Roy',
-      dob: '10 Jan 2004',
-      sex: 'Male',
-      category: 'SC',
-      mobile: '+91 87654 32100', 
-      email: 'aditya@example.com', 
-      course: 'B.SC(MLT)', 
-      rank: '3421', 
-      session: '2025-26',
-      district: 'South 24 Parganas',
-      college: 'George College',
-      admissionType: 'Regular',
-      aadhaar: 'XXXX XXXX 9012',
-      abcId: 'ABC90123456',
-      bloodGroup: 'A-',
-      religion: 'Hindu',
-      guardian: { name: 'Pradip Roy', contact: '8765432100', relation: 'Father', address: 'Sonarpur' },
-      contact: { address: 'Sonarpur, WB', altMobile: '9776655443', domicile: 'West Bengal', state: 'West Bengal', pin: '700150' },
-      education: { examType: '12th', board: 'WBBSE', year: '2023', marks: '75%', division: 'Second', cgpa: '7.5' }
-    }
-  ]);
+  const [students, setStudents] = useState([]);
 
   const [search, setSearch]           = useState('');
   const [showModal, setShowModal]     = useState(false);
@@ -114,10 +42,21 @@ export function StudentTable() {
   const [showFilter, setShowFilter]   = useState(false);
   const [selectedCourses, setSelectedCourses] = useState([]);
 
+  const fetchStudents = async () => {
+    try {
+      const res = await api.get('/student');
+      if (res.data.success) {
+        setStudents(res.data.data);
+      }
+    } catch (err) {
+      toast('Failed to load students', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    // Simulate loading
-    const timer = setTimeout(() => setLoading(false), 1500);
-    return () => clearTimeout(timer);
+    fetchStudents();
   }, []);
 
   const COURSES = [
@@ -155,13 +94,27 @@ export function StudentTable() {
 
   const setField = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!form.name || !form.email) return;
-    const newId = `CG27-00${students.length + 1}`;
-    setStudents(s => [...s, { ...form, id: newId }]);
-    setShowModal(false);
-    setForm({ name: '', mobile: '', email: '', course: '', session: '2025-26', fatherName: '', category: '' });
-    toast && toast(`${form.name} added successfully.`, 'success');
+    try {
+      const payload = {
+        fullName: form.name,
+        guardianName: form.fatherName || 'N/A',
+        mobile: form.mobile,
+        email: form.email,
+        course: form.course,
+        year: parseInt(form.session.split('-')[0]) || 2025
+      };
+      const res = await api.post('/student/create', payload);
+      if (res.data.success) {
+        toast && toast(`${form.name} added successfully.`, 'success');
+        setShowModal(false);
+        setForm({ name: '', mobile: '', email: '', course: '', session: '2025-26', fatherName: '', category: '' });
+        fetchStudents();
+      }
+    } catch (err) {
+      toast && toast(err.response?.data?.message || 'Failed to add student', 'error');
+    }
   };
 
   if (loading) return <TableSkeleton />;

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import api from '../../api/axios';
 import { 
   Users, 
   FileText, 
@@ -18,11 +19,32 @@ import { DashboardSkeleton } from '../../components/ui/Skeleton';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 
 /* ─── Applications Table ─── */
-export function ApplicationsTable({ limit }) {
+export function ApplicationsTable({ limit, dataList }) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [courseFilter, setCourseFilter] = useState('');
   const [showFilter, setShowFilter] = useState(false);
+  const [fetchedApplications, setFetchedApplications] = useState([]);
+  const [loading, setLoading] = useState(!dataList);
+  const toast = useToast();
+
+  useEffect(() => {
+    if (!dataList) {
+      const fetchApps = async () => {
+        try {
+          const res = await api.get('/review/applications');
+          if (res.data.success) {
+            setFetchedApplications(res.data.data);
+          }
+        } catch (error) {
+          toast && toast.showToast("Failed to fetch applications", "error");
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchApps();
+    }
+  }, [dataList]);
 
   const COURSES = [
     "Bachelor's Degree in Business Administration(BBA)",
@@ -41,25 +63,22 @@ export function ApplicationsTable({ limit }) {
     "Bachelor's Degree in Interior Design"
   ];
 
-  const applications = [
-    { id: 'CG27-001', name: 'Rahul Sharma',   course: 'BCA',        status: 'Under Review',    date: 'Oct 24, 2025' },
-    { id: 'CG27-002', name: 'Priya Singh',    course: 'BBA',        status: 'Approved',        date: 'Oct 23, 2025' },
-    { id: 'CG27-003', name: 'Aditya Roy',     course: 'B.SC(MLT)',  status: 'Approved',        date: 'Oct 22, 2025' },
-    { id: 'CG27-004', name: 'Sneha Das',      course: 'BBA (HM)',   status: 'Rejected',        date: 'Oct 21, 2025' },
-    { id: 'CG27-005', name: 'Amit Kumar',     course: 'BMS',        status: 'Need Correction', date: 'Oct 20, 2025' },
-  ];
+  const applications = dataList || fetchedApplications;
 
   const filtered = applications.filter(app => {
     const searchLower = search.toLowerCase();
-    const matchesSearch = app.name.toLowerCase().includes(searchLower) ||
+    const studentName = app.student?.fullName || app.student?.name || '';
+    const courseName = app.student?.course || app.formData?.phase1?.admissionDetails?.course || '';
+    
+    const matchesSearch = studentName.toLowerCase().includes(searchLower) ||
                           app.id.toLowerCase().includes(searchLower) ||
-                          app.course.toLowerCase().includes(searchLower);
+                          courseName.toLowerCase().includes(searchLower);
     
     const matchesStatus = statusFilter ? app.status === statusFilter : true;
     
     const matchesCourse = !courseFilter || 
-                          app.course === courseFilter || 
-                          courseFilter.toLowerCase().includes(app.course.toLowerCase());
+                          courseName === courseFilter || 
+                          courseFilter.toLowerCase().includes(courseName.toLowerCase());
 
     return matchesSearch && matchesStatus && matchesCourse;
   });
@@ -170,14 +189,21 @@ export function ApplicationsTable({ limit }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {data.map((app, i) => (
+            {loading && (
+              <tr>
+                <td colSpan={6} className="px-6 py-12 text-center text-text/45 text-sm">
+                  Loading applications...
+                </td>
+              </tr>
+            )}
+            {!loading && data.map((app, i) => (
               <tr key={app.id} className="hover:bg-muted/30 transition-colors animate-fade-in"
                 style={{ animationDelay: `${i * 40}ms` }}>
                 <td className="px-6 py-4 font-mono text-xs font-semibold text-text">{app.id}</td>
-                <td className="px-6 py-4 font-medium text-text">{app.name}</td>
-                <td className="px-6 py-4 text-text/55">{app.course}</td>
+                <td className="px-6 py-4 font-medium text-text">{app.student?.fullName || app.student?.name || 'Unknown'}</td>
+                <td className="px-6 py-4 text-text/55">{app.student?.course || app.formData?.phase1?.admissionDetails?.course || 'N/A'}</td>
                 <td className="px-6 py-4"><StatusBadge status={app.status} /></td>
-                <td className="px-6 py-4 text-text/55">{app.date}</td>
+                <td className="px-6 py-4 text-text/55">{new Date(app.createdAt).toLocaleDateString()}</td>
                 <td className="px-6 py-4 text-right">
                   <Link to={`/admin/applications/${app.id}`}
                     className="text-xs font-semibold text-primary border border-primary/25 px-3 py-1.5 rounded-lg hover:bg-primary/5 transition-colors">
@@ -186,7 +212,7 @@ export function ApplicationsTable({ limit }) {
                 </td>
               </tr>
             ))}
-            {data.length === 0 && (
+            {!loading && data.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-6 py-12 text-center text-text/45 text-sm">
                   No applications found matching your criteria.
@@ -206,12 +232,23 @@ export function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [phase1, setPhase1] = useState(true);
   const [phase2, setPhase2] = useState(false);
+  const [applications, setApplications] = useState([]);
   const toast = useToast();
 
   useEffect(() => {
-    // Simulate loading
-    const timer = setTimeout(() => setLoading(false), 1500);
-    return () => clearTimeout(timer);
+    const fetchDashboardData = async () => {
+      try {
+        const res = await api.get('/review/applications');
+        if (res.data.success) {
+          setApplications(res.data.data);
+        }
+      } catch (error) {
+        toast && toast.showToast("Failed to load dashboard data", "error");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDashboardData();
   }, []);
 
   const toggle = (phase, val, setVal) => {
@@ -220,10 +257,10 @@ export function AdminDashboard() {
   };
 
   const stats = [
-    { name: 'Total Applications', value: '1,248', sub: '+89 this week',   icon: Users,         color: 'text-blue-600',  bg: 'bg-blue-100' },
-    { name: 'Under Review',       value: '142',   sub: 'Needs attention', icon: Clock,         color: 'text-warning',   bg: 'bg-warning/10' },
-    { name: 'Approved',           value: '892',   sub: '71.5% rate',      icon: CheckCircle,   color: 'text-success',   bg: 'bg-success/10' },
-    { name: 'Rejected',           value: '214',   sub: '17.1% rate',      icon: XCircle,       color: 'text-danger',    bg: 'bg-danger/10' },
+    { name: 'Total Applications', value: applications.length, sub: 'All time',   icon: Users,         color: 'text-blue-600',  bg: 'bg-blue-100' },
+    { name: 'Under Review',       value: applications.filter(a => a.status === 'SUBMITTED' || a.status === 'UNDER_REVIEW').length,   sub: 'Needs attention', icon: Clock,         color: 'text-warning',   bg: 'bg-warning/10' },
+    { name: 'Approved',           value: applications.filter(a => a.status === 'APPROVED').length,   sub: 'Verified',      icon: CheckCircle,   color: 'text-success',   bg: 'bg-success/10' },
+    { name: 'Rejected',           value: applications.filter(a => a.status === 'REJECTED').length,   sub: 'Requires resubmission',      icon: XCircle,       color: 'text-danger',    bg: 'bg-danger/10' },
   ];
 
   if (loading) return <DashboardSkeleton />;
@@ -288,7 +325,7 @@ export function AdminDashboard() {
             View All →
           </Link>
         </div>
-        <ApplicationsTable limit={5} />
+        <ApplicationsTable limit={5} dataList={applications} />
       </div>
     </div>
   );
