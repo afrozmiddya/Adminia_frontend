@@ -87,6 +87,40 @@ export function ApplicationsTable({ limit, dataList }) {
 
   const statuses = ['Under Review', 'Approved', 'Rejected', 'Need Correction'];
 
+  const handleExportCSV = () => {
+    if (!filtered || filtered.length === 0) {
+      // using basic alert if toast isn't available in scope, but toast should be. Just in case:
+      return;
+    }
+    const headers = ['Application ID', 'Student Name', 'Course', 'Status', 'Date', 'Phase'];
+    
+    const csvRows = [headers.join(',')];
+
+    for (const app of filtered) {
+      const studentName = app.student?.fullName || app.student?.name || '';
+      const courseName = app.student?.course || app.formData?.phase1?.admissionDetails?.course || '';
+      const dateStr = new Date(app.createdAt || app.submittedAt || Date.now()).toLocaleDateString();
+      
+      const row = [
+        app.id,
+        studentName,
+        courseName,
+        app.status,
+        dateStr,
+        app.phase
+      ].map(val => `"${(val || '—').toString().replace(/"/g, '""')}"`);
+      csvRows.push(row.join(','));
+    }
+
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'applications_export.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   return (
     <div className={!limit ? "space-y-6 animate-fade-in" : ""}>
       {!limit && (
@@ -95,7 +129,7 @@ export function ApplicationsTable({ limit, dataList }) {
             <h1 className="text-2xl font-bold text-text">Applications</h1>
             <p className="text-text/60 mt-1 text-sm">Review and manage all student applications.</p>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-text rounded-xl font-medium text-sm hover:bg-muted/50 transition-colors shadow-sm">
+          <button onClick={handleExportCSV} className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-text rounded-xl font-medium text-sm hover:bg-muted/50 transition-colors shadow-sm">
             <Download className="w-4 h-4" /> Export CSV
           </button>
         </div>

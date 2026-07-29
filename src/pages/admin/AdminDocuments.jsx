@@ -22,6 +22,12 @@ const DOC_LABELS = {
   photo: "Passport Photo",
 };
 
+const getFileUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace('/api', '') + (url.startsWith('/') ? url : `/${url}`);
+};
+
 const COURSES = [
   "Bachelor's Degree in Business Administration(BBA)",
   "Bachelor's Degree in Computer Application (BCA)",
@@ -111,17 +117,13 @@ export function AdminDocuments() {
   // 🔥 BULK DOWNLOAD
   const handleBulkDownload = async () => {
     try {
-      const res = await fetch(import.meta.env.VITE_API_URL + '/document/bulk', {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          courses: selectedCourses,
-        }),
+      const res = await api.post('/document/bulk', {
+        courses: selectedCourses,
+      }, {
+        responseType: 'blob'
       });
 
-      const blob = await res.blob();
+      const blob = res.data;
       const url = window.URL.createObjectURL(blob);
 
       const a = document.createElement("a");
@@ -136,25 +138,35 @@ export function AdminDocuments() {
   // 🔥 STUDENT DOWNLOAD
   const handleStudentDownload = async () => {
     try {
-      const res = await fetch(import.meta.env.VITE_API_URL + '/document/student', {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          studentId: selectedStudent.id,
-        }),
+      const res = await api.post('/document/student', {
+        studentId: selectedStudent.id,
+      }, {
+        responseType: 'blob'
       });
 
-      const blob = await res.blob();
+      const blob = res.data;
       const url = window.URL.createObjectURL(blob);
 
       const a = document.createElement("a");
       a.href = url;
       a.download = `${selectedStudent.id}.zip`;
       a.click();
-    } catch {
-      toast("Download failed", "error");
+    } catch (err) {
+      let msg = "Download failed";
+      if (err.response && err.response.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text();
+          const json = JSON.parse(text);
+          msg = json.message || msg;
+        } catch (e) {
+          console.error("Error parsing blob response:", e);
+        }
+      } else if (err.response && err.response.data && err.response.data.message) {
+        msg = err.response.data.message;
+      } else if (err.message) {
+        msg = err.message;
+      }
+      toast(msg, "error");
     }
   };
 
@@ -331,9 +343,10 @@ export function AdminDocuments() {
 
       {/* MODAL - DETAILED VIEW */}
       {showModal && selectedStudent && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowModal(false)}>
-          <div className="bg-card rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden animate-scale-in flex flex-col max-h-[90vh] border border-border mt-8 sm:mt-12" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 border-b border-border flex justify-between items-center bg-muted/40">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 overflow-y-auto" onClick={() => setShowModal(false)}>
+          <div className="flex min-h-full p-4">
+            <div className="bg-card rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden animate-scale-in flex flex-col m-auto border border-border" onClick={(e) => e.stopPropagation()}>
+              <div className="p-6 border-b border-border flex justify-between items-center bg-muted/40">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-blue-600/30">
                   {selectedStudent.student.charAt(0)}
@@ -371,7 +384,7 @@ export function AdminDocuments() {
                     
                     <div className="flex gap-2">
                       <button 
-                        onClick={() => setPreviewDoc({ name: DOC_LABELS[k], key: k, status: selectedStudent[k] })}
+                        onClick={() => setPreviewDoc({ name: DOC_LABELS[k], key: k, status: selectedStudent[k], url: selectedStudent.documentUrls?.[k] })}
                         className="p-2 bg-card border border-border rounded-xl shadow-sm hover:text-primary hover:border-primary transition-all"
                         title="Preview"
                       >
@@ -412,14 +425,16 @@ export function AdminDocuments() {
                 Download All Documents (.zip)
               </button>
             </div>
+            </div>
           </div>
         </div>
       )}
 
       {/* DOCUMENT PREVIEW MODAL (TOP LAYER) */}
       {previewDoc && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[60] p-4 animate-fade-in" onClick={() => setPreviewDoc(null)}>
-          <div className="bg-card rounded-[32px] w-full max-w-4xl max-h-[85vh] shadow-2xl overflow-hidden animate-scale-in flex flex-col border border-border mt-8 sm:mt-12" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[60] overflow-y-auto animate-fade-in" onClick={() => setPreviewDoc(null)}>
+          <div className="flex min-h-full p-4 sm:p-8">
+            <div className="bg-card rounded-[32px] w-full max-w-4xl max-h-[90vh] h-[90vh] shadow-2xl overflow-hidden animate-scale-in flex flex-col border border-border m-auto" onClick={(e) => e.stopPropagation()}>
             <div className="p-6 border-b border-border flex justify-between items-center bg-muted/30">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-primary/10 rounded-2xl border border-primary/20">
@@ -436,12 +451,28 @@ export function AdminDocuments() {
             </div>
 
             <div className="flex-1 min-h-0 overflow-y-auto bg-background p-4 flex flex-col items-center justify-start sm:justify-center">
-              <div className="bg-card w-full max-w-[260px] sm:max-w-[340px] aspect-[3/4] rounded-2xl shadow-xl border border-border flex items-center justify-center relative my-auto shrink-0">
-                <div className="text-center opacity-30 text-text">
-                  <File className="w-20 h-20 mx-auto mb-4" />
-                  <p className="font-bold text-xl uppercase tracking-widest italic">Preview Mock</p>
+              {previewDoc.url ? (
+                previewDoc.url.toLowerCase().endsWith('.pdf') ? (
+                  <iframe 
+                    src={getFileUrl(previewDoc.url)} 
+                    className="w-full max-w-4xl h-[60vh] rounded-xl shadow-lg border border-border"
+                    title="Document Preview"
+                  />
+                ) : (
+                  <img 
+                    src={getFileUrl(previewDoc.url)} 
+                    alt="Document Preview" 
+                    className="max-w-full max-h-[60vh] object-contain rounded-xl shadow-lg border border-border"
+                  />
+                )
+              ) : (
+                <div className="bg-card w-full max-w-[260px] sm:max-w-[340px] aspect-[3/4] rounded-2xl shadow-xl border border-border flex items-center justify-center relative my-auto shrink-0">
+                  <div className="text-center opacity-30 text-text">
+                    <File className="w-20 h-20 mx-auto mb-4" />
+                    <p className="font-bold text-xl uppercase tracking-widest italic">No Document Found</p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <div className="p-6 border-t border-border flex justify-between items-center gap-4">
@@ -462,6 +493,7 @@ export function AdminDocuments() {
               <button className="flex items-center gap-2 px-6 py-3 border border-border rounded-2xl font-bold text-sm text-text/70 hover:bg-muted/50 transition-all">
                 <Download className="w-4 h-4" /> Download
               </button>
+            </div>
             </div>
           </div>
         </div>

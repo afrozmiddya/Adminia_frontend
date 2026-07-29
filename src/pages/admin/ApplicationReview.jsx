@@ -25,6 +25,12 @@ function StatusPill({ status }) {
   );
 }
 
+const getFileUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace('/api', '') + (url.startsWith('/') ? url : `/${url}`);
+};
+
 export function ApplicationReview() {
   const { id } = useParams();
   const [loading, setLoading] = useState(true);
@@ -415,8 +421,9 @@ export function ApplicationReview() {
 
       {/* 🔥 DOCUMENT PREVIEW MODAL */}
       {previewDoc && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4 sm:p-6 animate-fade-in" onClick={() => setPreviewDoc(null)}>
-          <div className="bg-card w-full max-w-5xl max-h-[90vh] rounded-3xl shadow-2xl flex flex-col animate-scale-in overflow-hidden border border-border mt-8 sm:mt-12" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 overflow-y-auto" onClick={() => setPreviewDoc(null)}>
+          <div className="flex min-h-full p-4 sm:p-6">
+            <div className="bg-card w-full max-w-5xl rounded-3xl shadow-2xl flex flex-col animate-scale-in overflow-hidden border border-border m-auto" onClick={e => e.stopPropagation()}>
             <div className="p-5 border-b border-border flex justify-between items-center bg-muted/40">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center">
@@ -442,15 +449,15 @@ export function ApplicationReview() {
             
             <div className="flex-1 min-h-0 overflow-y-auto bg-background p-6 sm:p-12 flex flex-col items-center justify-start sm:justify-center">
               {previewDoc.url ? (
-                previewDoc.mimeType?.includes('pdf') || previewDoc.fileName?.toLowerCase().endsWith('.pdf') ? (
+                previewDoc.mimeType?.includes('pdf') || previewDoc.fileName?.toLowerCase().endsWith('.pdf') || previewDoc.url.toLowerCase().endsWith('.pdf') ? (
                   <iframe 
-                    src={(import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace('/api', '') + previewDoc.url} 
+                    src={getFileUrl(previewDoc.url)} 
                     className="w-full max-w-4xl h-[70vh] rounded-xl shadow-lg border border-border"
                     title="Document Preview"
                   />
                 ) : (
                   <img 
-                    src={(import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace('/api', '') + previewDoc.url} 
+                    src={getFileUrl(previewDoc.url)} 
                     alt="Document Preview" 
                     className="max-w-full max-h-[70vh] object-contain rounded-xl shadow-lg border border-border"
                   />
@@ -485,9 +492,10 @@ export function ApplicationReview() {
                   <XCircle className="w-4 h-4" /> Reject Document
                 </button>
               </div>
-              <a href={(import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace('/api', '') + previewDoc.url} download={previewDoc.fileName || "document"} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 border border-border rounded-2xl font-bold text-sm text-text/70 hover:bg-muted/50 transition-all">
+              <a href={getFileUrl(previewDoc.url)} download={previewDoc.fileName || "document"} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 border border-border rounded-2xl font-bold text-sm text-text/70 hover:bg-muted/50 transition-all">
                 <Download className="w-4 h-4" /> Download Original
               </a>
+            </div>
             </div>
           </div>
         </div>

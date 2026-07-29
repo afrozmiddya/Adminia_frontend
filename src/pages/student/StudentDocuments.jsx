@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Check, ChevronRight, Upload, File, Send, AlertCircle, Lock, CheckCircle, RefreshCcw } from 'lucide-react';
+import { Check, ChevronRight, Upload, File, Send, AlertCircle, Lock, CheckCircle, RefreshCcw, Clock } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
 import api from '../../api/axios';
 
@@ -348,7 +348,7 @@ export function StudentDocuments() {
   }
 
   // ── Confirmed State ──
-  if (confirmed) {
+  if (confirmed || (appPhase === 2 && appStatus === 'COMPLETED')) {
     return (
       <div className="max-w-xl mx-auto mt-20 text-center animate-scale-in">
         <div className="w-20 h-20 rounded-2xl bg-success/10 flex items-center justify-center mx-auto mb-5">
@@ -358,6 +358,22 @@ export function StudentDocuments() {
         <p className="text-text/60 text-sm">Welcome to <span className="font-semibold text-text">133/George College</span>. Your Phase-II documentation is complete.</p>
         <div className="mt-6 p-5 bg-success/5 border border-success/20 rounded-2xl text-sm text-success font-medium">
           Check your registered email for the admission letter and further instructions.
+        </div>
+      </div>
+    );
+  }
+
+  // ── Under Review State ──
+  if (appPhase === 2 && appStatus === 'SUBMITTED') {
+    return (
+      <div className="max-w-xl mx-auto mt-20 text-center animate-scale-in">
+        <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-5">
+          <Clock className="w-10 h-10 text-primary" />
+        </div>
+        <h2 className="text-2xl font-bold text-text mb-2">Phase-II Under Review</h2>
+        <p className="text-text/60 text-sm">Your Phase-II documentation has been submitted and is currently being reviewed by the college administration.</p>
+        <div className="mt-6 p-5 bg-primary/5 border border-primary/20 rounded-2xl text-sm text-primary font-medium">
+          You will be notified once the review is complete.
         </div>
       </div>
     );

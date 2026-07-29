@@ -117,6 +117,40 @@ export function StudentTable() {
     }
   };
 
+  const handleExportCSV = () => {
+    if (!filtered || filtered.length === 0) {
+      toast && toast('No data to export', 'error');
+      return;
+    }
+    const headers = [
+      'Student ID', 'Student Name', 'Father\'s Name', 'Mother\'s Name', 'DOB', 'Sex', 'Category', 'Blood Group',
+      'Religion', 'Guardian Name', 'Relation', 'Guardian Contact', 'Mobile No.', 'Alternative Mobile', 'Email',
+      'Address', 'District', 'State', 'PIN', 'Domicile Type', 'Course', 'Session', 'College', 'Admission Type',
+      'Entrance Rank', 'Aadhaar No.', 'ABC ID', 'Exam Type', 'Board/Council', 'Passing Year', 'Marks Obtained', 'CGPA/DGPA'
+    ];
+
+    const csvRows = [headers.join(',')];
+
+    for (const s of filtered) {
+      const row = [
+        s.id, s.name, s.fatherName, s.motherName, s.dob, s.sex, s.category, s.bloodGroup,
+        s.religion, s.guardian?.name, s.guardian?.relation, s.guardian?.contact, s.mobile,
+        s.altMobile, s.email, s.address, s.district, s.state, s.pin, s.domicileType,
+        s.course, s.session, s.college, s.admissionType, s.rank, s.aadhaarNo, s.abcId,
+        s.examType, s.board, s.passingYear, s.marks, s.cgpa
+      ].map(val => `"${(val || '—').toString().replace(/"/g, '""')}"`);
+      csvRows.push(row.join(','));
+    }
+
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'students_export.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   if (loading) return <TableSkeleton />;
 
   return (
@@ -127,7 +161,7 @@ export function StudentTable() {
           <p className="text-text/60 mt-1 text-sm">Manage all enrolled students.</p>
         </div>
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-text rounded-xl font-medium text-sm hover:bg-muted/50 transition-colors">
+          <button onClick={handleExportCSV} className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-text rounded-xl font-medium text-sm hover:bg-muted/50 transition-colors">
             <Download className="w-4 h-4" /> Export CSV
           </button>
           <button onClick={() => setShowModal(true)}
@@ -353,16 +387,17 @@ export function StudentTable() {
 
       {/* Add Student Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-card border border-border w-full max-w-md rounded-2xl shadow-xl animate-scale-in">
-            <div className="flex items-center justify-between p-5 border-b border-border">
-              <h2 className="text-lg font-bold text-text">Add Student</h2>
-              <button onClick={() => setShowModal(false)}
-                className="p-1.5 text-text/45 hover:text-text hover:bg-muted/50 rounded-lg transition-colors">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-5 space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 overflow-y-auto">
+          <div className="flex min-h-full p-4">
+            <div className="bg-card border border-border w-full max-w-md rounded-2xl shadow-xl animate-scale-in m-auto">
+              <div className="flex items-center justify-between p-5 border-b border-border">
+                <h2 className="text-lg font-bold text-text">Add Student</h2>
+                <button onClick={() => setShowModal(false)}
+                  className="p-1.5 text-text/45 hover:text-text hover:bg-muted/50 rounded-lg transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-5 space-y-4">
               {[
                 { label: 'Full Name',     key: 'name',       ph: 'e.g. Rahul Sharma',  type: 'text'  },
                 // { label: "Guardian's Name", key: 'fatherName', ph: "Guardian's Name",       type: 'text'  },
@@ -387,6 +422,7 @@ export function StudentTable() {
                 className="px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm">
                 Add Student
               </button>
+            </div>
             </div>
           </div>
         </div>
