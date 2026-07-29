@@ -242,6 +242,12 @@ export function AdminDashboard() {
         if (res.data.success) {
           setApplications(res.data.data);
         }
+        
+        const phaseRes = await api.get('/phase/status');
+        if (phaseRes.data.success) {
+          setPhase1(phaseRes.data.data.phase1Enabled);
+          setPhase2(phaseRes.data.data.phase2Enabled);
+        }
       } catch (error) {
         toast && toast.showToast("Failed to load dashboard data", "error");
       } finally {
@@ -251,9 +257,15 @@ export function AdminDashboard() {
     fetchDashboardData();
   }, []);
 
-  const toggle = (phase, val, setVal) => {
-    setVal(!val);
-    toast && toast(`Phase ${phase} ${!val ? 'activated' : 'deactivated'}.`, !val ? 'success' : 'warning');
+  const toggle = async (phase, val, setVal) => {
+    try {
+      const endpoint = `/phase/phase${phase}/${!val ? 'enable' : 'disable'}`;
+      await api.patch(endpoint);
+      setVal(!val);
+      toast && toast(`Phase ${phase} ${!val ? 'activated' : 'deactivated'}.`, !val ? 'success' : 'warning');
+    } catch (err) {
+      toast && toast(`Failed to toggle Phase ${phase}.`, 'error');
+    }
   };
 
   const stats = [

@@ -19,17 +19,29 @@ const BANNER = {
 const STEPS = [
   { id: 1, name: 'Registration' },
   { id: 2, name: 'Phase-I Form' },
-  { id: 3, name: 'Review' },
-  { id: 4, name: 'Approved' },
-  { id: 5, name: 'Phase-II' },
+  { id: 3, name: 'Phase-I Review' },
+  { id: 4, name: 'Phase-I Approved' },
+  { id: 5, name: 'Phase-II Form' },
+  { id: 6, name: 'Admission Confirmed' },
 ];
-const PROGRESS = { Draft: 1, Submitted: 2, 'Under Review': 3, 'Need Correction': 2, Approved: 4, Confirmed: 5 };
 
-const UPDATES = [
-  { id: 1, title: 'Your application is under review.', date: '06 May 2026, 10:30 AM', icon: MessageSquare, color: 'text-primary', bg: 'bg-primary/10' },
-  { id: 2, title: 'Document verification in progress.', date: '05 May 2026, 04:15 PM', icon: ShieldCheck, color: 'text-warning', bg: 'bg-warning/10' },
-  { id: 3, title: 'Welcome! Your application has been submitted successfully.', date: '01 May 2026, 11:20 AM', icon: CheckCircle, color: 'text-success', bg: 'bg-success/10' }
-];
+const getProgressStep = (status, phase) => {
+  if (phase === 2) {
+    if (status === 'COMPLETED') return 6;
+    return 5;
+  }
+  
+  const map = {
+    'DRAFT': 2,
+    'SUBMITTED': 3,
+    'UNDER_REVIEW': 3,
+    'NEEDS_CORRECTION': 2,
+    'APPROVED': 4,
+  };
+  return map[status] || 2;
+};
+
+
 
 const GUIDELINES = [
   'Ensure all personal details match your official academic documents.',
@@ -74,11 +86,11 @@ export function StudentDashboard() {
   };
 
   const appStatus = appData ? statusMapping[appData.status] || 'Draft' : 'Draft';
-  const appId = appData?.applicationId || 'Not started';
+  const appId = appData?.id || 'Not started';
 
   const banner    = BANNER[appStatus] || BANNER['Draft'];
   const BIcon     = banner.icon;
-  const curStep   = PROGRESS[appStatus] || 1;
+  const curStep   = getProgressStep(appData?.status, appData?.phase || 1);
   const pct       = ((curStep - 1) / (STEPS.length - 1)) * 100;
 
   const stats = [
@@ -87,6 +99,98 @@ export function StudentDashboard() {
     { name: 'Application ID',     value: appId,       icon: Hash,      color: 'text-purple-400', bg: 'bg-purple-500/15' },
     { name: 'Next Deadline',   value: '2026-05-31',        icon: Clock,     color: 'text-warning',    bg: 'bg-warning/10' },
   ];
+
+  const generateUpdates = () => {
+    if (!appData) return [];
+    const updates = [];
+    
+    if (appData.submittedAt) {
+      updates.push({
+        id: 'submitted',
+        title: 'Application has been submitted successfully.',
+        date: new Date(appData.submittedAt).toLocaleString(),
+        icon: CheckCircle,
+        color: 'text-success',
+        bg: 'bg-success/10'
+      });
+    } else if (appData.createdAt) {
+      updates.push({
+        id: 'draft',
+        title: 'Phase 1 Registration initialized.',
+        date: new Date(appData.createdAt).toLocaleString(),
+        icon: Clock,
+        color: 'text-secondary',
+        bg: 'bg-secondary/10'
+      });
+    }
+
+    if (appData.status === 'UNDER_REVIEW') {
+      updates.push({
+        id: 'review',
+        title: 'Your application is under review.',
+        date: new Date(appData.updatedAt).toLocaleString(),
+        icon: MessageSquare,
+        color: 'text-primary',
+        bg: 'bg-primary/10'
+      });
+    } else if (appData.status === 'NEEDS_CORRECTION') {
+      updates.push({
+        id: 'correction',
+        title: 'Admin requested correction for your application.',
+        date: new Date(appData.updatedAt).toLocaleString(),
+        icon: AlertCircle,
+        color: 'text-warning',
+        bg: 'bg-warning/10'
+      });
+    } else if (appData.status === 'APPROVED' || appData.status === 'COMPLETED') {
+      updates.push({
+        id: 'approved',
+        title: 'Phase-I Application Approved!',
+        date: new Date(appData.updatedAt).toLocaleString(),
+        icon: CheckCircle,
+        color: 'text-success',
+        bg: 'bg-success/10'
+      });
+    } else if (appData.status === 'REJECTED') {
+      updates.push({
+        id: 'rejected',
+        title: 'Your application has been rejected.',
+        date: new Date(appData.updatedAt).toLocaleString(),
+        icon: AlertCircle,
+        color: 'text-danger',
+        bg: 'bg-danger/10'
+      });
+    }
+    
+    if (appData.documents && appData.documents.length > 0) {
+      const rejectedDocs = appData.documents.filter(d => d.status === 'REJECTED');
+      if (rejectedDocs.length > 0) {
+        updates.push({
+          id: 'docs-rejected',
+          title: `${rejectedDocs.length} document(s) rejected.`,
+          date: new Date(rejectedDocs[0].updatedAt).toLocaleString(),
+          icon: AlertCircle,
+          color: 'text-danger',
+          bg: 'bg-danger/10'
+        });
+      }
+      const verifiedDocs = appData.documents.filter(d => d.status === 'VERIFIED');
+      if (verifiedDocs.length > 0) {
+         updates.push({
+          id: 'docs-verified',
+          title: `${verifiedDocs.length} document(s) verified successfully.`,
+          date: new Date(verifiedDocs[verifiedDocs.length-1].updatedAt).toLocaleString(),
+          icon: ShieldCheck,
+          color: 'text-success',
+          bg: 'bg-success/10'
+        });
+      }
+    }
+    
+    return updates.sort((a, b) => new Date(b.date) - new Date(a.date));
+  };
+
+  const dynamicUpdates = generateUpdates();
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -161,8 +265,8 @@ export function StudentDashboard() {
         <div className="bg-card border border-border rounded-xl p-6 shadow-sm flex flex-col">
           <h2 className="text-base font-bold text-text mb-4">Latest Updates</h2>
           <div className="flex-1 space-y-0">
-            {UPDATES.map((update, idx) => (
-              <div key={update.id} className={`py-4 flex gap-4 ${idx !== UPDATES.length - 1 ? 'border-b border-border' : ''}`}>
+            {dynamicUpdates.length > 0 ? dynamicUpdates.map((update, idx) => (
+              <div key={update.id} className={`py-4 flex gap-4 ${idx !== dynamicUpdates.length - 1 ? 'border-b border-border' : ''}`}>
                 <div className={`p-2.5 rounded-xl ${update.bg} flex-shrink-0 h-fit`}>
                   <update.icon className={`w-5 h-5 ${update.color}`} />
                 </div>
@@ -171,7 +275,11 @@ export function StudentDashboard() {
                   <p className="text-xs text-text/55 mt-1">Updated on {update.date}</p>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="py-8 text-center text-text/50 text-sm">
+                No recent updates.
+              </div>
+            )}
           </div>
           <Link to="#" className="mt-4 pt-4 border-t border-border inline-flex items-center gap-1 text-primary text-sm font-semibold hover:text-primary/80 transition-colors">
             View All Updates <ArrowRight className="w-4 h-4 ml-1" />

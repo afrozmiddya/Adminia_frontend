@@ -33,6 +33,8 @@ export function ApplicationForm() {
   const [saving, setSaving] = useState(false);
   const toast = useToast();
 
+  const [appStatus, setAppStatus] = useState(null);
+
   const [form, setForm] = useState({
     session: '', district: '', college: '', courseUnderBy: '',
     admissionType: '', admissionCategory: '', entranceTest: '',
@@ -74,7 +76,8 @@ export function ApplicationForm() {
       await api.patch('/application/save-draft', formatPayload());
       toast && toast('Draft saved successfully!', 'success', 'Saved');
     } catch (err) {
-      toast && toast(err.response?.data?.message || 'Failed to save draft', 'error');
+      const specificError = err.response?.data?.errors?.[0];
+      toast && toast(specificError || err.response?.data?.message || 'Failed to save draft', 'error');
     } finally {
       setSaving(false);
     }
@@ -87,7 +90,8 @@ export function ApplicationForm() {
       toast && toast('Phase-I application submitted successfully!', 'success', 'Submitted');
       // Optionally redirect or update local state
     } catch (err) {
-      toast && toast(err.response?.data?.message || 'Failed to submit', 'error');
+      const specificError = err.response?.data?.errors?.[0];
+      toast && toast(specificError || err.response?.data?.message || 'Failed to submit', 'error');
     }
   };
 
@@ -96,10 +100,12 @@ export function ApplicationForm() {
     const loadDraft = async () => {
       try {
         const res = await api.get('/application/me');
-        if (res.data.success && res.data.data.formData?.phase1) {
-          const { admissionDetails, personalInformation, identityCitizenship } = res.data.data.formData.phase1;
-          setForm(f => ({
-            ...f,
+        if (res.data.success && res.data.data) {
+          setAppStatus(res.data.data.status);
+          if (res.data.data.formData?.phase1) {
+            const { admissionDetails, personalInformation, identityCitizenship } = res.data.data.formData.phase1;
+            setForm(f => ({
+              ...f,
             ...personalInformation,
             session: admissionDetails?.session || '',
             district: admissionDetails?.collegeDistrict || '',
@@ -118,6 +124,7 @@ export function ApplicationForm() {
             abcId: identityCitizenship?.abcId || '',
             aadhaar: identityCitizenship?.aadhaarNumber || ''
           }));
+        }
         }
       } catch (err) {
         console.error("Failed to load draft");
@@ -144,6 +151,22 @@ export function ApplicationForm() {
       ['Nationality', form.nationality], ['ABC/APAAR ID', form.abcId], ['Aadhaar No', form.aadhaar],
     ]},
   ];
+
+  if (appStatus && !['DRAFT', 'NEEDS_CORRECTION'].includes(appStatus)) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6 animate-fade-in text-center mt-20">
+         <div className="w-20 h-20 rounded-2xl bg-success/10 flex items-center justify-center mx-auto mb-5">
+           <Check className="w-10 h-10 text-success" />
+         </div>
+         <h1 className="text-2xl font-bold text-text">Phase-I Application Submitted</h1>
+         <p className="text-gray-500 mt-2 text-sm max-w-md mx-auto">
+           You have successfully submitted your Phase-I application. 
+           It is currently <span className="font-bold text-primary">{appStatus.replace('_', ' ')}</span>.
+           Please wait for the admin to review it.
+         </p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">

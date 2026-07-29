@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Check, ChevronRight, Upload, File, Send, AlertCircle, Lock, CheckCircle, RefreshCcw } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
+import api from '../../api/axios';
 
 // ── Phase-II is locked unless Phase-I is approved ──
 const PHASE1_APPROVED = true;
@@ -27,7 +28,23 @@ function Field({ label, required, children }) {
   );
 }
 
-function FileUploadCard({ label, hint, required, uploaded, onUpload }) {
+import { useRef } from 'react';
+
+function FileUploadCard({ label, hint, required, uploaded, onUpload, isUploading }) {
+  const fileInputRef = useRef(null);
+
+  const handleClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      onUpload(file);
+      e.target.value = null; // reset
+    }
+  };
+
   return (
     <div className={`border rounded-xl p-4 transition-all ${uploaded ? 'border-success/40 bg-success/5' : 'border-border bg-card'}`}>
       <div className="flex items-start justify-between mb-3">
@@ -44,17 +61,26 @@ function FileUploadCard({ label, hint, required, uploaded, onUpload }) {
         {uploaded && <CheckCircle className="w-5 h-5 text-success flex-shrink-0" />}
       </div>
       <p className="text-xs text-text/50 mb-3">{hint}</p>
+      
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleFileChange} 
+        className="hidden" 
+        accept={hint.includes('image') ? 'image/*' : '.pdf'} 
+      />
+
       {!uploaded ? (
-        <button type="button" onClick={onUpload}
-          className="w-full py-2.5 border-2 border-dashed border-border rounded-xl hover:border-primary/40 hover:bg-primary/5 transition-all text-sm text-text/55 font-medium flex items-center justify-center gap-2">
-          <Upload className="w-4 h-4" /> Click to Upload
+        <button type="button" onClick={handleClick} disabled={isUploading}
+          className={`w-full py-2.5 border-2 border-dashed border-border rounded-xl hover:border-primary/40 hover:bg-primary/5 transition-all text-sm text-text/55 font-medium flex items-center justify-center gap-2 ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+          <Upload className="w-4 h-4" /> {isUploading ? 'Uploading...' : 'Click to Upload'}
         </button>
       ) : (
         <div className="flex items-center justify-between">
           <span className="text-xs text-success font-semibold">Uploaded ✓</span>
-          <button type="button" onClick={onUpload}
-            className="flex items-center gap-1 text-xs text-text/45 hover:text-text transition-colors">
-            <RefreshCcw className="w-3 h-3" /> Replace
+          <button type="button" onClick={handleClick} disabled={isUploading}
+            className={`flex items-center gap-1 text-xs text-text/45 hover:text-text transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+            <RefreshCcw className="w-3 h-3" /> {isUploading ? 'Uploading...' : 'Replace'}
           </button>
         </div>
       )}
@@ -65,6 +91,10 @@ function FileUploadCard({ label, hint, required, uploaded, onUpload }) {
 export function StudentDocuments() {
   const [step, setStep] = useState(1);
   const [confirmed, setConfirmed] = useState(false);
+  const [appStatus, setAppStatus] = useState(null);
+  const [appPhase, setAppPhase] = useState(1);
+  const [phase2Enabled, setPhase2Enabled] = useState(false);
+  const [loading, setLoading] = useState(true);
   const toast = useToast();
 
   const [form, setForm] = useState({
@@ -92,10 +122,130 @@ export function StudentDocuments() {
   });
 
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
-  const upload = key => () => {
-    setUploads(u => ({ ...u, [key]: true }));
-    toast && toast('File uploaded successfully.', 'success');
+  const [uploadingState, setUploadingState] = useState({});
+
+  const upload = key => async (file) => {
+    setUploadingState(u => ({ ...u, [key]: true }));
+    try {
+      const UPLOAD_TYPES = {
+          photo: "PHOTO",
+          signature: "SIGNATURE",
+          dobProof: "DOB_PROOF",
+          antiRagging: "ANTI_RAGGING_DECLARATION",
+          domicileDoc: "DOMICILE_DOCUMENT",
+          finalMarksheet: "FINAL_MARKSHEET"
+      };
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', UPLOAD_TYPES[key]);
+
+      const res = await api.post('/document/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (res.data.success) {
+        setUploads(u => ({ ...u, [key]: true }));
+        toast && toast('File uploaded successfully.', 'success');
+      }
+    } catch (err) {
+      toast && toast(err.response?.data?.message || 'Failed to upload file', 'error');
+    } finally {
+      setUploadingState(u => ({ ...u, [key]: false }));
+    }
   };
+
+
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [appRes, phaseRes] = await Promise.all([
+          api.get('/application/me'),
+          api.get('/phase/status')
+        ]);
+        
+        if (appRes.data.success && appRes.data.data) {
+          const app = appRes.data.data;
+          setAppStatus(app.status);
+          setAppPhase(app.phase);
+          
+          // Try to pre-fill from phase2 or fallback to phase1
+          const phase1 = app.formData?.phase1 || {};
+          const phase2 = app.formData?.phase2 || {};
+          
+          const p1_p = phase1.personalInformation || {};
+          const p2_p = phase2.personalInformation || {};
+          const p1_g = phase1.guardianDetails || {};
+          const p2_g = phase2.guardianDetails || {};
+          const p1_c = phase1.contactDetails || {};
+          const p2_c = phase2.contactDetails || {};
+          const p1_e = phase1.educationalBackground || {};
+          const p2_e = phase2.educationalDetails || {};
+
+          setForm(prev => ({
+            ...prev,
+            studentName: p2_p.studentName || p1_p.studentName || prev.studentName,
+            fatherName: p2_p.fatherName || p1_p.fatherName || prev.fatherName,
+            motherName: p2_p.motherName || p1_p.motherName || prev.motherName,
+            dob: p2_p.dob || p1_p.dob || prev.dob,
+            category: p2_p.category || p1_p.category || prev.category,
+            sex: p2_p.sex || p1_p.sex || prev.sex,
+            bloodGroup: p2_p.bloodGroup || p1_p.bloodGroup || prev.bloodGroup,
+            religion: p2_p.religion || p1_p.religion || prev.religion,
+            
+            guardianName: p2_g.guardianName || p1_g.name || prev.guardianName,
+            guardianRelation: p2_g.relationWithStudent || p1_g.relation || prev.guardianRelation,
+            guardianContact: p2_g.contactNo || p1_g.contact || prev.guardianContact,
+            guardianAddress: p2_g.guardianAddress || prev.guardianAddress, // Not in phase 1 usually
+            
+            studentAddress: p2_c.studentAddress || p1_c.address || prev.studentAddress,
+            alternativeMobile: p1_c.altMobile || prev.alternativeMobile,
+            domicileType: p2_c.domicileType || p1_c.domicile || prev.domicileType,
+            state: p2_c.state || p1_c.state || prev.state,
+            district: p2_c.district || p1_c.district || prev.district,
+            pin: p2_c.pinCode || p1_c.pin || prev.pin,
+            
+            examType: p2_e.examinationType || p1_e.examType || prev.examType,
+            examName: p2_e.examinationName || p1_e.examName || prev.examName,
+            passingYear: p2_e.passingYear || p1_e.passingYear || prev.passingYear,
+            regNo: p2_e.registrationNo || prev.regNo,
+            board: p2_e.boardCouncil || p1_e.board || prev.board,
+            marksObtained: p2_e.marksObtained || p1_e.marksObtained || prev.marksObtained,
+            classDivision: p2_e.division || p1_e.classDivision || prev.classDivision,
+            dgpaCgpa: p2_e.dgpaCgpa || p1_e.dgpaCgpa || prev.dgpaCgpa,
+          }));
+
+          const docs = app.documents || [];
+          const currentUploads = { ...uploads };
+          const UPLOAD_TYPES_REV = {
+            "PHOTO": "photo",
+            "SIGNATURE": "signature",
+            "DOB_PROOF": "dobProof",
+            "ANTI_RAGGING_DECLARATION": "antiRagging",
+            "DOMICILE_DOCUMENT": "domicileDoc",
+            "FINAL_MARKSHEET": "finalMarksheet"
+          };
+          docs.forEach(d => {
+             const k = UPLOAD_TYPES_REV[d.type];
+             if (k) currentUploads[k] = true;
+          });
+          setUploads(currentUploads);
+        }
+        
+        if (phaseRes.data.success) {
+          setPhase2Enabled(phaseRes.data.data.phase2Enabled);
+        }
+      } catch (err) {
+        console.error("Failed to load data for Phase-II");
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
 
   const handleNext = e => { e.preventDefault(); setStep(s => Math.min(s + 1, 5)); window.scrollTo(0, 0); };
   const handleBack = () => { setStep(s => Math.max(s - 1, 1)); window.scrollTo(0, 0); };
@@ -103,17 +253,77 @@ export function StudentDocuments() {
   const requiredUploads = ['finalMarksheet', 'photo', 'signature', 'dobProof', 'antiRagging', 'domicileDoc'];
   const allRequiredUploaded = requiredUploads.every(k => uploads[k]);
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!allRequiredUploaded) {
       toast && toast('Please upload all required documents before confirming.', 'warning');
       return;
     }
-    setConfirmed(true);
-    toast && toast('Phase-II submitted! Admission confirmed.', 'success', 'Confirmed 🎉');
+    
+    try {
+      const payload = {
+        phase2: {
+          personalInformation: {
+            studentName: form.studentName,
+            fatherName: form.fatherName,
+            motherName: form.motherName,
+            dob: form.dob,
+            sex: form.sex,
+            category: form.category,
+            religion: form.religion,
+            bloodGroup: form.bloodGroup,
+          },
+          guardianDetails: {
+            guardianName: form.guardianName,
+            relationWithStudent: form.guardianRelation,
+            contactNo: form.guardianContact,
+            guardianAddress: form.guardianAddress,
+          },
+          contactDetails: {
+            studentAddress: form.studentAddress,
+            state: form.state,
+            district: form.district,
+            pinCode: form.pin,
+            domicileType: form.domicileType,
+          },
+          educationalDetails: {
+            examinationType: form.examType,
+            examinationName: form.examName,
+            boardCouncil: form.board,
+            registrationNo: form.regNo,
+            passingYear: form.passingYear,
+            marksObtained: form.marksObtained,
+            division: form.classDivision,
+          },
+          identityCitizenship: {
+            nationality: "Indian",
+            country: "India",
+          }
+        }
+      };
+      
+      const saveRes = await api.patch('/phase2/save-draft', payload);
+      if (saveRes.data.success) {
+        const submitRes = await api.post('/phase2/submit');
+        if (submitRes.data.success) {
+          setConfirmed(true);
+          toast && toast('Phase-II submitted! Admission confirmed.', 'success', 'Confirmed 🎉');
+        }
+      }
+    } catch (err) {
+      console.error(err.response?.data);
+      const msg = err.response?.data?.message || err.response?.data?.errors?.join(', ') || 'Failed to submit Phase-II';
+      toast && toast(msg, 'error');
+    }
   };
 
   // ── Locked State ──
-  if (!PHASE1_APPROVED) {
+  if (loading) {
+    return <div className="text-center mt-20 text-text/50">Loading...</div>;
+  }
+
+  const phase1Approved = appPhase >= 2;
+
+  if (!phase1Approved) {
     return (
       <div className="max-w-xl mx-auto mt-20 text-center animate-fade-in">
         <div className="w-20 h-20 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-5">
@@ -121,6 +331,18 @@ export function StudentDocuments() {
         </div>
         <h2 className="text-xl font-bold text-text mb-2">Phase-II Locked</h2>
         <p className="text-text/60 text-sm max-w-xs mx-auto">Phase-II documentation is only available after your Phase-I application is approved by the college admin.</p>
+      </div>
+    );
+  }
+
+  if (!phase2Enabled) {
+    return (
+      <div className="max-w-xl mx-auto mt-20 text-center animate-fade-in">
+        <div className="w-20 h-20 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-5">
+          <Lock className="w-9 h-9 text-text/45" />
+        </div>
+        <h2 className="text-xl font-bold text-text mb-2">Phase-II Currently Closed</h2>
+        <p className="text-text/60 text-sm max-w-xs mx-auto">The college administration has not yet activated Phase-II documentation.</p>
       </div>
     );
   }
@@ -324,6 +546,7 @@ export function StudentDocuments() {
                   hint="Supported file: image. Max 1 MB." 
                   required 
                   uploaded={uploads.photo} 
+                  isUploading={uploadingState.photo}
                   onUpload={upload('photo')} 
                 />
                 <FileUploadCard 
@@ -331,6 +554,7 @@ export function StudentDocuments() {
                   hint="Supported file: image. Max 1 MB." 
                   required 
                   uploaded={uploads.signature} 
+                  isUploading={uploadingState.signature}
                   onUpload={upload('signature')} 
                 />
                 <FileUploadCard 
@@ -338,6 +562,7 @@ export function StudentDocuments() {
                   hint="Supported file: PDF. Max 1 MB." 
                   required 
                   uploaded={uploads.dobProof} 
+                  isUploading={uploadingState.dobProof}
                   onUpload={upload('dobProof')} 
                 />
                 <FileUploadCard 
@@ -345,6 +570,7 @@ export function StudentDocuments() {
                   hint="FORMS TO BE DOWNLOADED FROM antiragging.in. PDF. Max 1 MB." 
                   required 
                   uploaded={uploads.antiRagging} 
+                  isUploading={uploadingState.antiRagging}
                   onUpload={upload('antiRagging')} 
                 />
                 <FileUploadCard 
@@ -352,6 +578,7 @@ export function StudentDocuments() {
                   hint="Supported file: PDF. Max 1 MB." 
                   required 
                   uploaded={uploads.domicileDoc} 
+                  isUploading={uploadingState.domicileDoc}
                   onUpload={upload('domicileDoc')} 
                 />
                 <FileUploadCard 
@@ -359,6 +586,7 @@ export function StudentDocuments() {
                   hint="Supported file: PDF. Max 1 MB." 
                   required 
                   uploaded={uploads.finalMarksheet} 
+                  isUploading={uploadingState.finalMarksheet}
                   onUpload={upload('finalMarksheet')} 
                 />
               </div>
