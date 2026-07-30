@@ -154,7 +154,8 @@ export function StudentTable() {
   if (loading) return <TableSkeleton />;
 
   return (
-    <div className="space-y-6 animate-fade-in w-full min-w-0">
+    <>
+      <div className="space-y-6 animate-fade-in w-full min-w-0">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-text">Students Directory</h1>
@@ -321,7 +322,8 @@ export function StudentTable() {
           </table>
         </div>
       </div>
-
+      </div>
+      
       {/* Student Details Modal */}
       <Modal open={!!selectedStudent} onClose={() => setSelectedStudent(null)} title="Student Details">
         {selectedStudent && (
@@ -427,6 +429,6 @@ export function StudentTable() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

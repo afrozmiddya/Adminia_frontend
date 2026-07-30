@@ -13,13 +13,15 @@ import { useToast } from "../../components/ui/Toast";
 import { TableSkeleton } from "../../components/ui/Skeleton";
 import api from "../../api/axios";
 
-const DOC_KEYS = ["doc10th", "doc12th", "idProof", "photo"];
+const DOC_KEYS = ["photo", "signature", "dobProof", "antiRagging", "domicile", "finalMarksheet"];
 
 const DOC_LABELS = {
-  doc10th: "10th Marksheet",
-  doc12th: "12th Marksheet",
-  idProof: "ID Proof (Aadhaar)",
-  photo: "Passport Photo",
+  photo: "Photo",
+  signature: "Signature",
+  dobProof: "DOB Proof",
+  antiRagging: "Anti Ragging",
+  domicile: "Domicile",
+  finalMarksheet: "Final Marksheet",
 };
 
 const getFileUrl = (url) => {
@@ -173,7 +175,8 @@ export function AdminDocuments() {
   if (loading) return <TableSkeleton />;
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <>
+      <div className="space-y-6 animate-fade-in">
       {/* HEADER */}
       <div className="flex justify-between items-end">
         <div>
@@ -289,10 +292,12 @@ export function AdminDocuments() {
                 <th className="px-6 py-4 text-left font-bold">Student ID</th>
                 <th className="text-left font-bold">Student Name</th>
                 <th className="text-left font-bold">Course</th>
-                <th className="text-left font-bold">10th</th>
-                <th className="text-left font-bold">12th</th>
-                <th className="text-left font-bold">ID Proof</th>
                 <th className="text-left font-bold">Photo</th>
+                <th className="text-left font-bold">Signature</th>
+                <th className="text-left font-bold">DOB Proof</th>
+                <th className="text-left font-bold">Anti Ragging</th>
+                <th className="text-left font-bold">Domicile</th>
+                <th className="text-left font-bold">Final Marksheet</th>
                 <th className="text-right px-6 font-bold">Action</th>
               </tr>
             </thead>
@@ -328,7 +333,7 @@ export function AdminDocuments() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-6 py-20 text-center">
+                  <td colSpan={10} className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center justify-center text-text/45">
                       <File className="w-10 h-10 mb-2 opacity-20" />
                       <p className="text-sm font-medium">No students found matching your criteria.</p>
@@ -339,6 +344,7 @@ export function AdminDocuments() {
             </tbody>
           </table>
         </div>
+      </div>
       </div>
 
       {/* MODAL - DETAILED VIEW */}
@@ -498,6 +504,6 @@ export function AdminDocuments() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

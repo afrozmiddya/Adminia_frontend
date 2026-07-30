@@ -72,7 +72,7 @@ export function ApplicationReview() {
         { label: 'College', value: appData?.formData?.phase1?.admissionDetails?.collegeName || 'N/A', icon: Building2 },
         { label: 'Course Under By', value: appData?.formData?.phase1?.admissionDetails?.courseUnderBy || 'N/A', icon: GraduationCap },
         { label: 'Admission Type', value: appData?.formData?.phase1?.admissionDetails?.admissionType || 'N/A', icon: User },
-        { label: "Category", value: appData?.formData?.phase1?.admissionDetails?.category || 'N/A', icon: Shield },
+        { label: "Category", value: appData?.formData?.phase1?.admissionDetails?.admissionCategory || 'N/A', icon: Shield },
         { label: "Entrance Test", value: appData?.formData?.phase1?.admissionDetails?.entranceTest || 'N/A', icon: FileText },
         { label: "Course", value: appData?.formData?.phase1?.admissionDetails?.course || 'N/A', icon: GraduationCap },
         { label: "Stream", value: appData?.formData?.phase1?.admissionDetails?.stream || 'N/A', icon: BookOpen },
@@ -80,58 +80,58 @@ export function ApplicationReview() {
         { label: "Entrance Roll No", value: appData?.formData?.phase1?.admissionDetails?.entranceRollNo || 'N/A', icon: FileText },
       ],
       personal: [
-        { label: 'Student Name', value: appData?.student?.fullName || 'N/A', icon: User },
-        { label: 'Sex', value: appData?.formData?.phase1?.personalInfo?.gender || 'N/A', icon: User },
-        { label: 'Date of Birth', value: appData?.formData?.phase1?.personalInfo?.dob || 'N/A', icon: Calendar },
-        { label: 'Mobile', value: appData?.student?.mobile || 'N/A', icon: Phone },
-        { label: 'Email', value: appData?.student?.email || 'N/A', icon: Mail },
-        { label: "Father's Name", value: appData?.formData?.phase1?.personalInfo?.fatherName || 'N/A', icon: User },
-        { label: "Mother's Name", value: appData?.formData?.phase1?.personalInfo?.motherName || 'N/A', icon: User },
+        { label: 'Student Name', value: appData?.student?.fullName || appData?.formData?.phase1?.personalInformation?.studentName || 'N/A', icon: User },
+        { label: 'Sex', value: appData?.formData?.phase1?.personalInformation?.sex || 'N/A', icon: User },
+        { label: 'Date of Birth', value: appData?.formData?.phase1?.personalInformation?.dob || 'N/A', icon: Calendar },
+        { label: 'Mobile', value: appData?.student?.mobile || appData?.formData?.phase1?.personalInformation?.mobile || 'N/A', icon: Phone },
+        { label: 'Email', value: appData?.formData?.phase1?.personalInformation?.email || 'N/A', icon: Mail },
+        { label: "Father's Name", value: appData?.formData?.phase1?.personalInformation?.fatherName || 'N/A', icon: User },
+        { label: "Mother's Name", value: appData?.formData?.phase1?.personalInformation?.motherName || 'N/A', icon: User },
       ],
       identity: [
-        { label: 'Residential Status', value: appData?.formData?.phase1?.identity?.residentialStatus || 'N/A', icon: MapPin },
-        { label: 'Country', value: appData?.formData?.phase1?.identity?.country || 'N/A', icon: Globe },
-        { label: 'Nationality', value: appData?.formData?.phase1?.identity?.nationality || 'N/A', icon: Globe },
-        { label: 'Aadhaar No.', value: appData?.formData?.phase1?.identity?.aadhaarNumber || 'N/A', icon: Shield },
-        { label: 'ABC / APAAR ID', value: appData?.formData?.phase1?.identity?.abcId || 'N/A', icon: Shield },
+        { label: 'Residential Status', value: appData?.formData?.phase1?.identityCitizenship?.residentialStatus || 'N/A', icon: MapPin },
+        { label: 'Country', value: appData?.formData?.phase1?.identityCitizenship?.country || 'N/A', icon: Globe },
+        { label: 'Nationality', value: appData?.formData?.phase1?.identityCitizenship?.nationality || 'N/A', icon: Globe },
+        { label: 'Aadhaar No.', value: appData?.formData?.phase1?.identityCitizenship?.aadhaarNumber || 'N/A', icon: Shield },
+        { label: 'ABC / APAAR ID', value: appData?.formData?.phase1?.identityCitizenship?.abcId || 'N/A', icon: Shield },
       ],
     },
 
     phase2: {
       additional: [
-        { label: 'Student Name', value: appData?.student?.fullName || 'N/A', icon: User },
-        { label: "Father's Name", value: appData?.formData?.phase1?.personalInfo?.fatherName || 'N/A', icon: User },
-        { label: "Mother's Name", value: appData?.formData?.phase1?.personalInfo?.motherName || 'N/A', icon: User },
-        { label: 'DOB', value: appData?.formData?.phase1?.personalInfo?.dob || 'N/A', icon: Calendar },
-        { label: 'Category', value: appData?.formData?.phase1?.admissionDetails?.category || 'N/A', icon: Shield },
-        { label: 'Sex', value: appData?.formData?.phase1?.personalInfo?.gender || 'N/A', icon: User },
-        { label: 'Blood Group', value: appData?.formData?.phase2?.additionalDetails?.bloodGroup || 'N/A', icon: Activity },
-        { label: 'Religion', value: appData?.formData?.phase2?.additionalDetails?.religion || 'N/A', icon: Globe },
+        { label: 'Student Name', value: appData?.student?.fullName || appData?.formData?.phase1?.personalInformation?.studentName || 'N/A', icon: User },
+        { label: "Father's Name", value: appData?.formData?.phase1?.personalInformation?.fatherName || 'N/A', icon: User },
+        { label: "Mother's Name", value: appData?.formData?.phase1?.personalInformation?.motherName || 'N/A', icon: User },
+        { label: 'DOB', value: appData?.formData?.phase1?.personalInformation?.dob || 'N/A', icon: Calendar },
+        { label: 'Category', value: appData?.formData?.phase1?.admissionDetails?.admissionCategory || 'N/A', icon: Shield },
+        { label: 'Sex', value: appData?.formData?.phase1?.personalInformation?.sex || 'N/A', icon: User },
+        { label: 'Blood Group', value: appData?.formData?.phase2?.personalInformation?.bloodGroup || 'N/A', icon: Activity },
+        { label: 'Religion', value: appData?.formData?.phase2?.personalInformation?.religion || 'N/A', icon: Globe },
       ],
 
       guardian: [
         { label: 'Name', value: appData?.formData?.phase2?.guardianDetails?.guardianName || 'N/A', icon: User },
         { label: 'Address', value: appData?.formData?.phase2?.guardianDetails?.guardianAddress || 'N/A', icon: MapPin },
-        { label: 'Contact No', value: appData?.formData?.phase2?.guardianDetails?.guardianContact || 'N/A', icon: Phone },
-        { label: 'Relation', value: appData?.formData?.phase2?.guardianDetails?.guardianRelation || 'N/A', icon: User },
+        { label: 'Contact No', value: appData?.formData?.phase2?.guardianDetails?.contactNo || 'N/A', icon: Phone },
+        { label: 'Relation', value: appData?.formData?.phase2?.guardianDetails?.relationWithStudent || 'N/A', icon: User },
       ],
 
       contact: [
-        { label: 'Address', value: appData?.formData?.phase2?.contactDetails?.address || 'N/A', icon: MapPin },
-        { label: 'Alt Mobile', value: appData?.formData?.phase2?.contactDetails?.alternateMobile || 'N/A', icon: Phone },
-        { label: 'Domicile', value: appData?.formData?.phase2?.contactDetails?.domicile || 'N/A', icon: MapPin },
+        { label: 'Address', value: appData?.formData?.phase2?.contactDetails?.studentAddress || 'N/A', icon: MapPin },
+        { label: 'Domicile', value: appData?.formData?.phase2?.contactDetails?.domicileType || 'N/A', icon: MapPin },
         { label: 'State', value: appData?.formData?.phase2?.contactDetails?.state || 'N/A', icon: MapPin },
         { label: 'District', value: appData?.formData?.phase2?.contactDetails?.district || 'N/A', icon: MapPin },
-        { label: 'PIN', value: appData?.formData?.phase2?.contactDetails?.pin || 'N/A', icon: MapPin },
+        { label: 'PIN', value: appData?.formData?.phase2?.contactDetails?.pinCode || 'N/A', icon: MapPin },
       ],
 
       education: [
-        { label: 'Exam Type', value: appData?.formData?.phase2?.educationDetails?.examType || 'N/A', icon: BookOpen },
-        { label: 'Board', value: appData?.formData?.phase2?.educationDetails?.board || 'N/A', icon: Building2 },
-        { label: 'Year', value: appData?.formData?.phase2?.educationDetails?.year || 'N/A', icon: Calendar },
-        { label: 'Marks', value: appData?.formData?.phase2?.educationDetails?.marks || 'N/A', icon: Activity },
-        { label: 'Division', value: appData?.formData?.phase2?.educationDetails?.division || 'N/A', icon: Shield },
-        { label: 'CGPA', value: appData?.formData?.phase2?.educationDetails?.cgpa || 'N/A', icon: Activity },
+        { label: 'Exam Type', value: appData?.formData?.phase2?.educationalDetails?.examinationType || 'N/A', icon: BookOpen },
+        { label: 'Exam Name', value: appData?.formData?.phase2?.educationalDetails?.examinationName || 'N/A', icon: BookOpen },
+        { label: 'Board', value: appData?.formData?.phase2?.educationalDetails?.boardCouncil || 'N/A', icon: Building2 },
+        { label: 'Reg No', value: appData?.formData?.phase2?.educationalDetails?.registrationNo || 'N/A', icon: FileText },
+        { label: 'Year', value: appData?.formData?.phase2?.educationalDetails?.passingYear || 'N/A', icon: Calendar },
+        { label: 'Marks', value: appData?.formData?.phase2?.educationalDetails?.marksObtained || 'N/A', icon: Activity },
+        { label: 'Division', value: appData?.formData?.phase2?.educationalDetails?.division || 'N/A', icon: Shield },
       ],
     }
   };
@@ -224,7 +224,8 @@ export function ApplicationReview() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-fade-in">
+    <>
+      <div className="max-w-6xl mx-auto space-y-8 animate-fade-in">
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
@@ -415,8 +416,8 @@ export function ApplicationReview() {
               <p className="text-xs mt-1">Please switch to Phase {appData?.phase || 1} to take action on this application.</p>
             </div>
           )}
-
         </div>
+      </div>
       </div>
 
       {/* 🔥 DOCUMENT PREVIEW MODAL */}
@@ -500,6 +501,6 @@ export function ApplicationReview() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

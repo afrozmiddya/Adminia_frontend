@@ -83,7 +83,8 @@ export function CollegesPage() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <>
+      <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-text">Colleges</h1>
@@ -157,6 +158,7 @@ export function CollegesPage() {
           </table>
         </div>
       </div>
+      </div>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit College' : 'Add New College'}>
         <div className="space-y-4">
@@ -176,6 +178,6 @@ export function CollegesPage() {
           </div>
         </div>
       </Modal>
-    </div>
+    </>
   );
 }

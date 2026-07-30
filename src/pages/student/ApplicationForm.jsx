@@ -3,6 +3,7 @@ import { Check, ChevronRight, Save, Send } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
 import api from '../../api/axios';
 import { useEffect } from 'react';
+import { useAuthStore } from '../../store/authStore';
 
 const STEPS = [
   { id: 1, name: 'Admission Details' },
@@ -32,6 +33,7 @@ export function ApplicationForm() {
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const toast = useToast();
+  const { user } = useAuthStore();
 
   const [appStatus, setAppStatus] = useState(null);
 
@@ -228,7 +230,7 @@ export function ApplicationForm() {
                 <Field label="College Name" required>
                   <select className={selectCls} value={form.college} onChange={set('college')}>
                     <option value="">Choose college</option>
-                    <option>133/George College</option>
+                    <option>{user?.college?.name || 'George College'}</option>
                   </select>
                 </Field>
 

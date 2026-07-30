@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Check, ChevronRight, Upload, File, Send, AlertCircle, Lock, CheckCircle, RefreshCcw, Clock } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
 import api from '../../api/axios';
+import { useAuthStore } from '../../store/authStore';
 
 // ── Phase-II is locked unless Phase-I is approved ──
 const PHASE1_APPROVED = true;
@@ -96,6 +97,7 @@ export function StudentDocuments() {
   const [phase2Enabled, setPhase2Enabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const toast = useToast();
+  const { user } = useAuthStore();
 
   const [form, setForm] = useState({
     // Step 1 – Student's Additional Information
@@ -355,7 +357,7 @@ export function StudentDocuments() {
           <CheckCircle className="w-10 h-10 text-success" />
         </div>
         <h2 className="text-2xl font-bold text-text mb-2">Admission Confirmed! 🎉</h2>
-        <p className="text-text/60 text-sm">Welcome to <span className="font-semibold text-text">133/George College</span>. Your Phase-II documentation is complete.</p>
+        <p className="text-text/60 text-sm">Welcome to <span className="font-semibold text-text">{user?.college?.name || 'Your College'}</span>. Your Phase-II documentation is complete.</p>
         <div className="mt-6 p-5 bg-success/5 border border-success/20 rounded-2xl text-sm text-success font-medium">
           Check your registered email for the admission letter and further instructions.
         </div>

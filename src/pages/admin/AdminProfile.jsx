@@ -5,6 +5,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
+import { useAuthStore } from '../../store/authStore';
 
 const fieldCls =
   'w-full px-4 py-2.5 bg-card text-text placeholder:text-text/45 border border-border rounded-xl text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-colors';
@@ -13,16 +14,17 @@ const fieldReadonlyCls =
 
 export function AdminProfile() {
   const toast = useToast();
+  const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState('personal');
   const [isSaving, setIsSaving] = useState(false);
 
   const [profile, setProfile] = useState({
-    name: 'College Admin',
-    email: 'admin@college.edu',
-    phone: '+91 98765 43210',
-    role: 'Principal Administrator',
-    college: 'George College',
-    address: 'Kolkata, West Bengal',
+    name: user?.name || 'College Admin',
+    email: user?.email || 'admin@college.edu',
+    phone: user?.phone || 'N/A', // Assuming backend doesn't have phone for admin yet or it's not in user payload
+    role: user?.role === 'SUPER_ADMIN' ? 'Super Administrator' : 'Principal Administrator',
+    college: user?.college?.name || 'George College',
+    address: user?.college?.address || 'N/A',
     avatar: null
   });
 

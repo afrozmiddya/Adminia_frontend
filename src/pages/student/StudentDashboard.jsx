@@ -80,12 +80,13 @@ export function StudentDashboard() {
     'DRAFT': 'Draft',
     'SUBMITTED': 'Submitted',
     'UNDER_REVIEW': 'Under Review',
-    'NEED_CORRECTION': 'Need Correction',
+    'NEEDS_CORRECTION': 'Need Correction',
     'APPROVED': 'Approved',
-    'CONFIRMED': 'Confirmed'
+    'COMPLETED': 'Confirmed',
+    'REJECTED': 'Rejected'
   };
 
-  const appStatus = appData ? statusMapping[appData.status] || 'Draft' : 'Draft';
+  const appStatus = appData?.status ? (statusMapping[appData.status] || 'Draft') : 'Draft';
   const appId = appData?.id || 'Not started';
 
   const banner    = BANNER[appStatus] || BANNER['Draft'];
