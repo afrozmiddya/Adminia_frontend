@@ -230,7 +230,7 @@ export function ApplicationForm() {
                 <Field label="College Name" required>
                   <select className={selectCls} value={form.college} onChange={set('college')}>
                     <option value="">Choose college</option>
-                    <option>{user?.college?.name || 'George College'}</option>
+                    <option>{user?.college?.name || 'Select College'}</option>
                   </select>
                 </Field>
 

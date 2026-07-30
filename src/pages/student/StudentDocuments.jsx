@@ -166,7 +166,7 @@ export function StudentDocuments() {
       try {
         const [appRes, phaseRes] = await Promise.all([
           api.get('/application/me'),
-          api.get('/phase/status')
+          api.get(`/phase/status?t=${Date.now()}`),
         ]);
         
         if (appRes.data.success && appRes.data.data) {

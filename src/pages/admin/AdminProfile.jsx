@@ -23,7 +23,7 @@ export function AdminProfile() {
     email: user?.email || 'admin@college.edu',
     phone: user?.phone || 'N/A', // Assuming backend doesn't have phone for admin yet or it's not in user payload
     role: user?.role === 'SUPER_ADMIN' ? 'Super Administrator' : 'Principal Administrator',
-    college: user?.college?.name || 'George College',
+    college: user?.college?.name || 'Not Assigned',
     address: user?.college?.address || 'N/A',
     avatar: null
   });

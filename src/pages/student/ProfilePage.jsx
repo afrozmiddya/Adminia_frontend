@@ -33,7 +33,7 @@ export function ProfilePage() {
     id: user?.id || "N/A",
     email: user?.email || "email@example.com",
     phone: user?.phone || "Not provided",
-    college: "George College",
+    college: user?.college?.name || "Not Assigned",
     course: "Not selected",
     address: "Not provided",
     avatar: null

@@ -13,7 +13,7 @@ const BANNER = {
   'Under Review':   { color: 'bg-primary/5 border-primary/20', icon: Clock,       title: 'Under Review', desc: 'Your Phase-I application is being reviewed. You will be notified of the decision.', action: null },
   'Need Correction':{ color: 'bg-warning/5 border-warning/30', icon: AlertCircle, title: 'Correction Required', desc: 'Admin has requested changes to your Phase-I application.', action: 'Edit Application', href: '/student/application' },
   Approved:         { color: 'bg-success/5 border-success/30', icon: CheckCircle, title: 'Phase-I Approved!', desc: 'Congratulations! Proceed to Phase-II documentation to confirm your admission.', action: 'Start Phase-II', href: '/student/documents' },
-  Confirmed:        { color: 'bg-primary/10 border-primary/25', icon: CheckCircle, title: 'Admission Confirmed!', desc: 'Your admission to George College is complete. Welcome!', action: null },
+  Confirmed:        { color: 'bg-primary/10 border-primary/25', icon: CheckCircle, title: 'Admission Confirmed!', desc: 'Your admission is complete. Welcome!', action: null },
 };
 
 const STEPS = [
@@ -26,7 +26,8 @@ const STEPS = [
 ];
 
 const getProgressStep = (status, phase) => {
-  if (phase === 2) {
+  const currentPhase = Number(phase);
+  if (currentPhase === 2) {
     if (status === 'COMPLETED') return 6;
     return 5;
   }
@@ -54,6 +55,7 @@ const GUIDELINES = [
 export function StudentDashboard() {
   const { user } = useAuthStore();
   const [appData, setAppData] = useState(null);
+  const [phaseSettings, setPhaseSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const showToast = useToast();
 
@@ -63,6 +65,12 @@ export function StudentDashboard() {
         const res = await api.get('/application/me');
         if (res.data.success && res.data.data) {
           setAppData(res.data.data);
+        }
+
+        const phaseRes = await api.get(`/phase/status?t=${Date.now()}`);
+        if (phaseRes.data.success) {
+          console.log("PHASE SETTINGS FROM API:", phaseRes.data.data);
+          setPhaseSettings(phaseRes.data.data);
         }
       } catch (err) {
         if (err.response?.status !== 404) {
@@ -94,11 +102,21 @@ export function StudentDashboard() {
   const curStep   = getProgressStep(appData?.status, appData?.phase || 1);
   const pct       = ((curStep - 1) / (STEPS.length - 1)) * 100;
 
+  const currentPhase = Number(appData?.phase || 1);
+  
+  // Choose which deadline to show based on the phase the student is in
+  const deadlineStr = currentPhase === 1 
+    ? phaseSettings?.phase1Deadline 
+    : phaseSettings?.phase2Deadline;
+  
+  const displayDeadline = deadlineStr 
+    ? new Date(deadlineStr).toLocaleDateString('en-GB') 
+    : 'No Deadline';
   const stats = [
     { name: 'Application Status', value: appStatus,       icon: Activity,  color: 'text-primary',    bg: 'bg-primary/10' },
     { name: 'Docs Uploaded',      value: appData?.documents?.length ? `${appData.documents.length} Docs` : '0 Docs',          icon: FileText,  color: 'text-secondary',  bg: 'bg-secondary/10' },
     { name: 'Application ID',     value: appId,       icon: Hash,      color: 'text-purple-400', bg: 'bg-purple-500/15' },
-    { name: 'Next Deadline',   value: '2026-05-31',        icon: Clock,     color: 'text-warning',    bg: 'bg-warning/10' },
+    { name: `Phase ${currentPhase} Deadline`, value: displayDeadline, icon: Clock,     color: 'text-warning',    bg: 'bg-warning/10' },
   ];
 
   const generateUpdates = () => {

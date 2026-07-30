@@ -12,7 +12,8 @@ import {
   ToggleRight, 
   Clock, 
   AlertTriangle,
-  Download
+  Download,
+  Calendar
 } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
 import { DashboardSkeleton } from '../../components/ui/Skeleton';
@@ -267,6 +268,9 @@ export function AdminDashboard() {
   const [phase1, setPhase1] = useState(true);
   const [phase2, setPhase2] = useState(false);
   const [applications, setApplications] = useState([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [targetPhase, setTargetPhase] = useState(null);
+  const [deadlineDate, setDeadlineDate] = useState('');
   const toast = useToast();
 
   useEffect(() => {
@@ -277,7 +281,7 @@ export function AdminDashboard() {
           setApplications(res.data.data);
         }
         
-        const phaseRes = await api.get('/phase/status');
+        const phaseRes = await api.get(`/phase/status?t=${Date.now()}`);
         if (phaseRes.data.success) {
           setPhase1(phaseRes.data.data.phase1Enabled);
           setPhase2(phaseRes.data.data.phase2Enabled);
@@ -291,14 +295,40 @@ export function AdminDashboard() {
     fetchDashboardData();
   }, []);
 
-  const toggle = async (phase, val, setVal) => {
+  const confirmToggle = async () => {
+    if (targetPhase === null) return;
+    const { phase, val, setVal } = targetPhase;
     try {
       const endpoint = `/phase/phase${phase}/${!val ? 'enable' : 'disable'}`;
-      await api.patch(endpoint);
+      const payload = !val ? { deadline: deadlineDate } : {};
+      await api.patch(endpoint, payload);
       setVal(!val);
       toast && toast(`Phase ${phase} ${!val ? 'activated' : 'deactivated'}.`, !val ? 'success' : 'warning');
     } catch (err) {
       toast && toast(`Failed to toggle Phase ${phase}.`, 'error');
+    } finally {
+      setModalOpen(false);
+      setDeadlineDate('');
+      setTargetPhase(null);
+    }
+  };
+
+  const handleToggleClick = (phase, val, setVal) => {
+    if (!val) {
+      // Trying to activate, show modal
+      setTargetPhase({ phase, val, setVal });
+      setModalOpen(true);
+    } else {
+      // Trying to deactivate, do it immediately
+      setTargetPhase({ phase, val, setVal });
+      // Have to call confirmToggle indirectly after setting state, or directly pass args
+      const disableEndpoint = `/phase/phase${phase}/disable`;
+      api.patch(disableEndpoint).then(() => {
+        setVal(false);
+        toast && toast(`Phase ${phase} deactivated.`, 'warning');
+      }).catch(() => {
+        toast && toast(`Failed to toggle Phase ${phase}.`, 'error');
+      });
     }
   };
 
@@ -327,8 +357,8 @@ export function AdminDashboard() {
         </div>
         <div className="flex flex-col sm:flex-row gap-4">
           {[
-            { label: 'Phase I — Application Form', active: phase1, num: 1, toggle: () => toggle(1, phase1, setPhase1) },
-            { label: 'Phase II — Documentation',   active: phase2, num: 2, toggle: () => toggle(2, phase2, setPhase2) },
+            { label: 'Phase I — Application Form', active: phase1, num: 1, toggle: () => handleToggleClick(1, phase1, setPhase1) },
+            { label: 'Phase II — Documentation',   active: phase2, num: 2, toggle: () => handleToggleClick(2, phase2, setPhase2) },
           ].map(ph => (
             <div key={ph.num}
               className={`flex-1 flex items-center justify-between p-4 rounded-xl border transition-all ${ph.active ? 'bg-success/5 border-success/30' : 'bg-muted/40 border-border'}`}>
@@ -373,6 +403,54 @@ export function AdminDashboard() {
         </div>
         <ApplicationsTable limit={5} dataList={applications} />
       </div>
+
+      {/* Deadline Modal */}
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in p-4">
+          <div className="bg-card w-full max-w-md rounded-2xl shadow-xl overflow-hidden border border-border animate-scale-in">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-text">Set Phase Deadline</h3>
+                  <p className="text-xs text-text/60">Choose a deadline for this phase to automatically close.</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-text">Deadline Date</label>
+                  <input
+                    type="date"
+                    min={new Date().toISOString().split('T')[0]}
+                    value={deadlineDate}
+                    onChange={(e) => setDeadlineDate(e.target.value)}
+                    className="w-full px-4 py-2 bg-muted/50 border border-border rounded-xl outline-none focus:border-primary text-sm text-text"
+                  />
+                  <p className="text-xs text-warning mt-1">If left empty, the phase will stay open indefinitely.</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 mt-8">
+                <button
+                  onClick={() => { setModalOpen(false); setDeadlineDate(''); setTargetPhase(null); }}
+                  className="px-4 py-2 text-sm font-bold text-text/60 hover:text-text hover:bg-muted/50 rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmToggle}
+                  className="px-5 py-2 bg-primary text-white text-sm font-bold rounded-xl hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
+                >
+                  Activate Phase
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
