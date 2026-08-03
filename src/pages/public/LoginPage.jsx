@@ -115,15 +115,17 @@ export function LoginPage() {
                     {/* FORM */}
                     <form className="space-y-5" onSubmit={handleLogin}>
                         
-                        {/* EMAIL */}
+                        {/* EMAIL / MOBILE */}
                         <div>
-                            <label className="text-sm font-medium block mb-1 text-text">Email</label>
+                            <label className="text-sm font-medium block mb-1 text-text">
+                                {role === 'student' ? 'Mobile Number' : 'Email'}
+                            </label>
                             <div className="relative">
                                 <input
-                                    type="email"
+                                    type={role === 'student' ? 'tel' : 'email'}
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="Enter your email"
+                                    placeholder={role === 'student' ? 'Enter your mobile number' : 'Enter your email'}
                                     required
                                     className="w-full px-4 py-2 rounded-xl border border-border bg-card text-text placeholder:text-text/45 focus:ring-2 focus:ring-primary/50 outline-none"
                                 />
@@ -133,13 +135,15 @@ export function LoginPage() {
 
                         {/* PASSWORD */}
                         <div>
-                            <label className="text-sm font-medium block mb-1 text-text">Password / Mobile Number</label>
+                            <label className="text-sm font-medium block mb-1 text-text">
+                                {role === 'student' ? 'Password (Date of Birth)' : 'Password'}
+                            </label>
                             <div className="relative">
                                 <input
                                     type={showPassword ? "text" : "password"}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="Enter your password or mobile number"
+                                    placeholder={role === 'student' ? 'e.g. DD/MM/YYYY' : 'Enter your password'}
                                     required
                                     className="w-full px-4 py-2 rounded-xl border border-border bg-card text-text placeholder:text-text/45 focus:ring-2 focus:ring-primary/50 outline-none"
                                 />

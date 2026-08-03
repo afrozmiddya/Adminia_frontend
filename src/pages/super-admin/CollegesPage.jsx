@@ -12,7 +12,7 @@ export function CollegesPage() {
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: '', mobile: '', email: '', location: ''});
+  const [form, setForm] = useState({ name: '', mobile: '', email: '', location: '', password: ''});
   const toast = useToast();
 
   const fetchColleges = async () => {
@@ -40,23 +40,31 @@ export function CollegesPage() {
     c.location.toLowerCase().includes(search.toLowerCase())
   );
 
-  const openAdd = () => { setEditing(null); setForm({ name: '', mobile: '', email: '', location: '' }); setModalOpen(true); };
-  const openEdit = (c) => { setEditing(c); setForm({ name: c.name, mobile: c.mobile, email: c.email, location: c.location }); setModalOpen(true); };
+  const openAdd = () => { setEditing(null); setForm({ name: '', mobile: '', email: '', location: '', password: '' }); setModalOpen(true); };
+  const openEdit = (c) => { setEditing(c); setForm({ name: c.name, mobile: c.mobile, email: c.email, location: c.location, password: '' }); setModalOpen(true); };
 
   const handleSave = async () => {
     if (!form.name || !form.mobile || !form.email || !form.location) return;
+    if (!editing && !form.password) {
+      toast('Please enter a password', 'error');
+      return;
+    }
     try {
+      const payload = {
+          collegeName: form.name,
+          mobile: form.mobile,
+          email: form.email,
+          location: form.location,
+          password: form.password
+      };
+      
       if (editing) {
-        // Mocking edit API for now, since it wasn't specified in backend yet
-        setColleges(cs => cs.map(c => c.id === editing.id ? { ...c, ...form } : c));
-        toast('College updated locally (API not yet implemented)', 'success');
+        const res = await api.put(`/college/${editing.id}`, payload);
+        if (res.data.success) {
+          toast('College updated successfully!', 'success');
+          fetchColleges();
+        }
       } else {
-        const payload = {
-            collegeName: form.name,
-            mobile: form.mobile,
-            email: form.email,
-            location: form.location
-        };
         const res = await api.post('/college/register', payload);
         if (res.data.success) {
           toast('College registered successfully!', 'success');
@@ -168,7 +176,9 @@ export function CollegesPage() {
             <input className={inputCls} value={form.mobile} onChange={e => setForm(f => ({ ...f, mobile: e.target.value }))} placeholder="Enter mobile" /></div>
           <div><label className="block text-sm font-medium text-text mb-1.5">Email <span className="text-danger">*</span></label>
             <input className={inputCls} value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="Enter email" /></div>
-            <div><label className="block text-sm font-medium text-text mb-1.5">Location <span className="text-danger">*</span></label>
+          <div><label className="block text-sm font-medium text-text mb-1.5">Password {editing ? <span className="text-text/50 font-normal text-xs">(Leave blank to keep current)</span> : <span className="text-danger">*</span>}</label>
+            <input type="password" className={inputCls} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder={editing ? "Enter new password (optional)" : "Enter admin password"} /></div>
+          <div><label className="block text-sm font-medium text-text mb-1.5">Location <span className="text-danger">*</span></label>
             <input className={inputCls} value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="Enter Location" /></div>
           <div className="flex justify-end gap-3 pt-2">
             <button onClick={() => setModalOpen(false)} className="px-5 py-2.5 rounded-xl border border-border text-text font-medium text-sm hover:bg-muted/50 transition-colors">Cancel</button>

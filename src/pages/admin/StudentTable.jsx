@@ -95,21 +95,22 @@ export function StudentTable() {
   const setField = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
 
   const handleAdd = async () => {
-    if (!form.name || !form.email) return;
+    if (!form.name || !form.mobile) return;
     try {
       const payload = {
         fullName: form.name,
         guardianName: form.fatherName || 'N/A',
         mobile: form.mobile,
-        email: form.email,
+        email: form.email || null,
         course: form.course,
-        year: parseInt(form.session.split('-')[0]) || 2025
+        year: parseInt(form.session.split('-')[0]) || 2025,
+        dob: form.dob
       };
       const res = await api.post('/student/create', payload);
       if (res.data.success) {
         toast && toast(`${form.name} added successfully.`, 'success');
         setShowModal(false);
-        setForm({ name: '', mobile: '', email: '', course: '', session: '2025-26', fatherName: '', category: '' });
+        setForm({ name: '', mobile: '', email: '', course: '', session: '2025-26', fatherName: '', category: '', dob: '' });
         fetchStudents();
       }
     } catch (err) {
@@ -402,9 +403,10 @@ export function StudentTable() {
               <div className="p-5 space-y-4">
               {[
                 { label: 'Full Name',     key: 'name',       ph: 'e.g. Rahul Sharma',  type: 'text'  },
+                { label: 'Date of Birth', key: 'dob',        ph: 'DD/MM/YYYY or YYYY-MM-DD', type: 'date'  },
                 // { label: "Guardian's Name", key: 'fatherName', ph: "Guardian's Name",       type: 'text'  },
                 // { label: 'Category',      key: 'category',   ph: 'e.g. General, SC',   type: 'text'  },
-                { label: 'Mobile',        key: 'mobile',     ph: '+91 XXXXX XXXXX',    type: 'tel'   },
+                { label: 'Mobile (User ID)',        key: 'mobile',     ph: '+91 XXXXX XXXXX',    type: 'tel'   },
                 { label: 'Email',         key: 'email',      ph: 'you@example.com',    type: 'email' },
                 { label: 'Course',        key: 'course',     ph: 'e.g. BCA',           type: 'text'  },
                 // { label: 'Entrance Rank', key: 'rank',       ph: 'e.g. 1245',          type: 'text'  },

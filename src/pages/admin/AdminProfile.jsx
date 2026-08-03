@@ -3,9 +3,12 @@ import {
   User, Mail, Phone, MapPin, Shield,
   Camera, Save, Lock, Globe,
   LogOut,
+  Eye, EyeOff,
 } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
 import { useAuthStore } from '../../store/authStore';
+import { useNavigate } from 'react-router-dom';
+import api from '../../api/axios';
 
 const fieldCls =
   'w-full px-4 py-2.5 bg-card text-text placeholder:text-text/45 border border-border rounded-xl text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-colors';
@@ -14,17 +17,26 @@ const fieldReadonlyCls =
 
 export function AdminProfile() {
   const toast = useToast();
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('personal');
   const [isSaving, setIsSaving] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [showPasswords, setShowPasswords] = useState(false);
+  
+  const [passwords, setPasswords] = useState({
+    current: '',
+    new: '',
+    confirm: ''
+  });
 
   const [profile, setProfile] = useState({
     name: user?.name || 'College Admin',
     email: user?.email || 'admin@college.edu',
-    phone: user?.phone || 'N/A', // Assuming backend doesn't have phone for admin yet or it's not in user payload
+    phone: user?.college?.mobile || 'N/A', 
     role: user?.role === 'SUPER_ADMIN' ? 'Super Administrator' : 'Principal Administrator',
     college: user?.college?.name || 'Not Assigned',
-    address: user?.college?.address || 'N/A',
+    address: user?.college?.location || 'N/A',
     avatar: null
   });
 
@@ -34,6 +46,44 @@ export function AdminProfile() {
       setIsSaving(false);
       toast('Profile updated successfully', 'success');
     }, 1000);
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/admin-login');
+  };
+
+  const handlePasswordUpdate = async () => {
+    if (!passwords.current || !passwords.new || !passwords.confirm) {
+      toast('Please fill in all password fields', 'error');
+      return;
+    }
+    if (passwords.new !== passwords.confirm) {
+      toast('New passwords do not match', 'error');
+      return;
+    }
+    if (passwords.new === passwords.current) {
+      toast('New password cannot be the same as current password', 'error');
+      return;
+    }
+    
+    setIsUpdatingPassword(true);
+    try {
+      await api.patch('/auth/change-password', {
+        currentPassword: passwords.current,
+        newPassword: passwords.new
+      });
+      setPasswords({ current: '', new: '', confirm: '' });
+      toast('Password updated successfully', 'success');
+      
+      // Optionally logout user after password change
+      // logout();
+      // navigate('/admin-login');
+    } catch (error) {
+      toast(error.response?.data?.message || 'Failed to update password', 'error');
+    } finally {
+      setIsUpdatingPassword(false);
+    }
   };
 
   const tabs = [
@@ -77,7 +127,7 @@ export function AdminProfile() {
             </button>
           ))}
           <div className="pt-4 mt-4 border-t border-border">
-            <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-red-500 hover:bg-red-500/10 transition-all">
+            <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-red-500 hover:bg-red-500/10 transition-all">
               <LogOut className="w-4 h-4" />
               Sign Out
             </button>
@@ -181,11 +231,46 @@ export function AdminProfile() {
                   Change Password
                 </h3>
                 <div className="grid gap-4 max-w-md">
-                  <input type="password" placeholder="Current Password" className={fieldCls} />
-                  <input type="password" placeholder="New Password" className={fieldCls} />
-                  <input type="password" placeholder="Confirm New Password" className={fieldCls} />
-                  <button className="w-fit px-6 py-2 bg-gray-900 text-white rounded-xl text-sm font-bold hover:bg-black transition-colors">
-                    Update Password
+                  <div className="relative">
+                    <input 
+                      type={showPasswords ? "text" : "password"}
+                      placeholder="Current Password" 
+                      className={fieldCls} 
+                      value={passwords.current}
+                      onChange={(e) => setPasswords({...passwords, current: e.target.value})}
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => setShowPasswords(!showPasswords)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-text/50 hover:text-text transition-colors"
+                    >
+                      {showPasswords ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input 
+                      type={showPasswords ? "text" : "password"}
+                      placeholder="New Password" 
+                      className={fieldCls} 
+                      value={passwords.new}
+                      onChange={(e) => setPasswords({...passwords, new: e.target.value})}
+                    />
+                  </div>
+                  <div className="relative">
+                    <input 
+                      type={showPasswords ? "text" : "password"}
+                      placeholder="Confirm New Password" 
+                      className={fieldCls} 
+                      value={passwords.confirm}
+                      onChange={(e) => setPasswords({...passwords, confirm: e.target.value})}
+                    />
+                  </div>
+                  <button 
+                    onClick={handlePasswordUpdate}
+                    disabled={isUpdatingPassword}
+                    className="w-fit px-6 py-2 bg-gray-900 text-white rounded-xl text-sm font-bold hover:bg-black transition-colors disabled:opacity-70"
+                  >
+                    {isUpdatingPassword ? 'Updating...' : 'Update Password'}
                   </button>
                 </div>
               </div>
